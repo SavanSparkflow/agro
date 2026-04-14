@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Ultra-Premium Light Mode - Clean SaaS Aesthetic */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-border: rgba(15, 23, 42, 0.08);
+  /* Clean crisp border */
+  --text-main: #0f172a;
+  /* Slate 900 for high legibility */
+  --text-muted: #64748b;
+  /* Slate 500 for secondary text */
+  --form-primary: #10b981;
+  /* Brand Emerald Green */
+  --form-primary-rgb: 16, 185, 129;
+}
+
+.dark {
+  /* Professional Dark Mode */
+  --background: #09090b;
+  --surface: #121214;
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --form-primary: #34d399;
+  /* Lighter emerald for dark mode */
+  --form-primary-rgb: 52, 211, 153;
+}
+
+@layer base {
+  body {
+    @apply bg-background font-sans antialiased overflow-x-hidden transition-colors duration-300;
+    color: var(--text-main);
+    /* High-end ambient textured background (kept extremely subtle) */
+    background-image:
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.02) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.02) 0px, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2310b981' fill-opacity='0.01'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-attachment: fixed;
+  }
+}
+
+/* Professional Invoice Print Styles for react-to-print */
+@media print {
+  @page {
+    margin: 20mm;
+    size: auto;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  /* Ensure colors and backgrounds print exactly as seen */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Reset layout for the target container */
+  #printable-invoice {
+    background: white !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    visibility: visible !important;
+  }
+}
+
+/* Redefined Clean Surfaces for High-Contrast & Professionalism */
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-lg border border-surfaceBorder shadow-sm transition-all duration-300;
+    background-color: var(--surface);
+  }
+
+  .glass-card {
+    @apply border border-surfaceBorder shadow-sm hover:shadow-md transition-all duration-300 rounded-[2rem];
+    background-color: var(--surface);
+  }
+
+  .glass-input {
+    @apply border border-surfaceBorder rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all duration-200;
+    background-color: var(--surface);
+    color: var(--text-main);
+  }
+
+  /* Velzon Premium Form Design */
+  .form-label {
+    @apply block text-[13px] font-medium mb-1.5 transition-colors duration-200;
+    color: var(--text-muted);
+  }
+
+  .form-control {
+    @apply w-full px-3 py-2 text-[14px] bg-surface border border-surfaceBorder rounded-[4px] transition-all duration-200 outline-none;
+    color: var(--text-main);
+  }
+
+  .form-control:focus {
+    border-color: var(--form-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--form-primary-rgb), 0.15);
+  }
+
+  .form-select {
+    @apply form-control appearance-none bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+  }
+
+  .form-check-input {
+    @apply w-4 h-4 rounded border-surfaceBorder bg-surface focus:ring-offset-0 focus:ring-2 transition-all cursor-pointer;
+    color: var(--form-primary);
+  }
+
+  .form-check-input:checked {
+    background-color: var(--form-primary);
+    border-color: var(--form-primary);
+  }
+
+  .form-switch {
+    @apply relative inline-flex h-5 w-9 items-center rounded-full bg-surfaceBorder transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-background;
+  }
+
+  .form-switch[aria-checked="true"] {
+    background-color: var(--form-primary);
+  }
+
+  .form-switch-dot {
+    @apply inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300;
+  }
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
