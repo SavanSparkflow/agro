@@ -3,9 +3,32 @@ import FormInput from "../../components/ui/FormInput";
 import Button from "../../components/ui/Button";
 import ThemeToggle from "../../components/ui/ThemeToggle";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate, Link } from "react-router-dom";
+import { useLoginMutation } from "../../redux/api/authApi";
+import { setCredentials } from "../../redux/slices/authSlice";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
+
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [login, { isLoading }] = useLoginMutation();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      const result = await login(formData).unwrap();
+      dispatch(setCredentials(result));
+      navigate("/");
+    } catch (err) {
+      setError(err?.data?.Message || err?.data?.message || "Login failed. Please check your credentials.");
+    }
+  };
+
   return (
     <div className="min-h-screen flex text-theme-main bg-background">
       <div className="absolute top-8 right-8 z-50">
@@ -27,24 +50,34 @@ export default function Login() {
           <h1 className="text-4xl font-black text-tmain tracking-tight mb-2">Welcome Back</h1>
           <p className="text-tmuted font-medium mb-10">Sign in to your Agro ERP dashboard.</p>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <FormInput 
-              type="email" 
-              label="Email Address" 
-              placeholder="dealer@agro.in" 
+              type="text" 
+              label="Username" 
+              placeholder="admin@pureyou.com" 
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               required 
             />
             
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="form-label mb-0">Password</label>
-                <a href="#" className="text-xs font-bold text-primary-500 hover:text-primary-600 transition-colors dark:text-primary-400 dark:hover:text-primary-300">Forgot password?</a>
+                <Link to="/forgot-password" size={14} className="text-xs font-bold text-primary-500 hover:text-primary-600 transition-colors dark:text-primary-400 dark:hover:text-primary-300">Forgot password?</Link>
               </div>
               <div className="relative">
                 <input 
                   type={showPassword ? "text" : "password"}
                   className="form-control"
                   placeholder="••••••••" 
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required 
                 />
                 <button 
@@ -57,9 +90,9 @@ export default function Login() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full py-4 text-base mt-4 group">
-              <span>Sign In</span>
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            <Button type="submit" disabled={isLoading} className="w-full py-4 text-base mt-4 group">
+              <span>{isLoading ? "Signing In..." : "Sign In"}</span>
+              {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
             </Button>
           </form>
 

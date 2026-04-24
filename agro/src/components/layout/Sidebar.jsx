@@ -1,9 +1,13 @@
-import { NavLink, Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, UserCircle, Box, Tags, Archive,
-  ReceiptIndianRupee, ChevronLeft, ChevronRight, MessageSquare, Shield, Clock, ShoppingCart
+  ReceiptIndianRupee, ChevronLeft, ChevronRight, MessageSquare, Shield, Clock, ShoppingCart, LogOut, Key, Layers, ShoppingBag, Scale
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useDispatch, useSelector } from "react-redux";
+import { logout, updateUser } from "../../redux/slices/authSlice";
+import { useLogoutMutation, useGetProfileQuery } from "../../redux/api/authApi";
 
 const DEALER_LINKS = [
   { name: "Dashboard", href: "/dealer", icon: LayoutDashboard },
@@ -19,11 +23,42 @@ const DEALER_LINKS = [
 const ADMIN_LINKS = [
   { name: "Dealers List", href: "/admin/dealers", icon: Shield },
   { name: "User List", href: "/admin/users", icon: Users },
-  { name: "Permissions", href: "/admin/permissions", icon: Shield },
+  { name: "Departments", href: "/admin/departments", icon: Layers },
+  { name: "Products", href: "/admin/products", icon: ShoppingBag },
+  { name: "Categories", href: "/admin/categories", icon: Tags },
+  { name: "Units", href: "/admin/units", icon: Scale },
+  { name: "Role Management", href: "/admin/permissions", icon: Shield },
+  { name: "User Permissions", href: "/admin/user-permissions", icon: Key },
 ];
 
 export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOpen }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const [logoutApi] = useLogoutMutation();
+  
+  // Fetch profile if authenticated to get user details
+  const { data: profileData } = useGetProfileQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  useEffect(() => {
+    if (profileData?.Data?.userData) {
+      dispatch(updateUser(profileData.Data.userData));
+    }
+  }, [profileData, dispatch]);
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi().unwrap();
+    } catch (err) {
+      console.error("Logout failed:", err);
+    } finally {
+      dispatch(logout());
+      navigate("/login");
+    }
+  };
 
   return (
     <>
@@ -154,19 +189,37 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
           </div>
 
           {/* User Profile Footer */}
-          <Link to="/profile" className="p-4 border-t border-surfaceBorder shrink-0 bg-surface/30 hover:bg-surface/80 transition-colors group cursor-pointer block">
-            <div className={cn("flex items-center gap-3 transition-all duration-300", isOpen ? "px-2" : "justify-center")}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-surface/80 to-surface/40 p-[2px] shrink-0 group-hover:from-primary-500 group-hover:to-primary-600 transition-colors border border-surfaceBorder">
-                <div className="w-full h-full bg-surface rounded-[10px] flex items-center justify-center overflow-hidden">
-                  <UserCircle className="text-tmuted w-full h-full p-1 opacity-80 group-hover:text-tmain" />
+          <div className="border-t border-surfaceBorder shrink-0 bg-surface/30">
+            <Link to="/profile" className="p-4 flex items-center justify-between group hover:bg-surface/80 transition-colors cursor-pointer">
+              <div className={cn("flex items-center gap-3 transition-all duration-300", isOpen ? "px-2" : "justify-center")}>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-surface/80 to-surface/40 p-[2px] shrink-0 group-hover:from-primary-500 group-hover:to-primary-600 transition-colors border border-surfaceBorder">
+                  <div className="w-full h-full bg-surface rounded-[10px] flex items-center justify-center overflow-hidden">
+                    {user?.profilePic ? (
+                      <img src={user.profilePic} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <UserCircle className="text-tmuted w-full h-full p-1 opacity-80 group-hover:text-tmain" />
+                    )}
+                  </div>
+                </div>
+                <div className={cn("flex flex-col transition-all duration-300", isOpen ? "opacity-100 w-auto" : "opacity-0 w-0 absolute")}>
+                  <span className="text-sm font-semibold text-tmain truncate group-hover:text-primary-400">{user?.name || "Admin"}</span>
+                  <span className="text-xs text-tmuted truncate">{user?.rolename || "User"}</span>
                 </div>
               </div>
-              <div className={cn("flex flex-col transition-all duration-300", isOpen ? "opacity-100 w-auto" : "opacity-0 w-0 absolute")}>
-                <span className="text-sm font-semibold text-tmain truncate group-hover:text-primary-400">Ramesh Kumar</span>
-                <span className="text-xs text-tmuted truncate">Dealer Account</span>
+            </Link>
+            
+            {isOpen && (
+              <div className="px-6 pb-4">
+                <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all text-xs font-bold"
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
               </div>
-            </div>
-          </Link>
+            )}
+          </div>
 
           {!isOpen && (
             <div className="px-4 pb-4 bg-surface/30">

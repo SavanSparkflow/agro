@@ -13,18 +13,45 @@ import SalesHistory from "./pages/SalesHistory";
 import Dealers from "./pages/admin/Dealers";
 import Users from "./pages/admin/Users";
 import FeedbackList from "./pages/admin/FeedbackList";
-import RolePermissions from "./pages/admin/RolePermissions";
+import RoleManagement from "./pages/admin/RoleManagement";
+import UserPermissionManagement from "./pages/admin/UserPermissionManagement";
+import Departments from "./pages/admin/Departments";
+import AdminProducts from "./pages/admin/Products";
+import AdminCategories from "./pages/admin/Categories";
+import AdminUnits from "./pages/admin/Units";
 import Login from "./pages/auth/Login";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PublicRoute from "./components/auth/PublicRoute";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth Flow (Standalone) */}
-        <Route path="/login" element={<Login />} />
+        {/* Auth Flow (Public only) */}
+        <Route path="/login" element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        } />
+        <Route path="/forgot-password" element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        } />
+        <Route path="/reset-password" element={
+          <PublicRoute>
+            <ResetPassword />
+          </PublicRoute>
+        } />
 
-        {/* Dashboard Flow (Requires Layout) */}
-        <Route path="/" element={<Layout />}>
+        {/* Dashboard Flow (Requires Authentication) */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
           <Route index element={<Dashboard />} />
           <Route path="dealer" element={<Dashboard />} />
           <Route path="dealer/orders" element={<Orders />} />
@@ -40,8 +67,13 @@ export default function App() {
           {/* Admin Flow */}
           <Route path="admin/dealers" element={<Dealers />} />
           <Route path="admin/users" element={<Users />} />
+          <Route path="admin/departments" element={<Departments />} />
           <Route path="admin/feedback" element={<FeedbackList />} />
-          <Route path="admin/permissions" element={<RolePermissions />} />
+          <Route path="admin/permissions" element={<RoleManagement />} />
+          <Route path="admin/user-permissions" element={<UserPermissionManagement />} />
+          <Route path="admin/products" element={<AdminProducts />} />
+          <Route path="admin/categories" element={<AdminCategories />} />
+          <Route path="admin/units" element={<AdminUnits />} />
           <Route path="customers" element={<Customers />} />
           <Route path="reports" element={<div className="p-4 text-theme-muted">Reports Page (Coming Soon)</div>} />
 
