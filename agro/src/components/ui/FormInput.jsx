@@ -11,7 +11,7 @@ export default function FormInput({ label, error, className, ...props }) {
       <input 
         className={cn(
           "form-control transition-all duration-200",
-          error && "border-red-500 focus:border-red-500 focus:ring-red-500/10",
+          error && "!border-red-500 !focus:border-red-500 focus:ring-red-500/10",
           props.disabled && "bg-surfaceBorder/20 text-tmuted/70 cursor-not-allowed opacity-70"
         )}
         {...props}

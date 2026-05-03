@@ -1,57 +1,230 @@
-import { useState } from "react";
-import { Plus, Search, Edit2, Trash2, Mail, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Search, Edit2, Trash2, Mail, Shield, Loader2, Save, User as UserIcon, Phone, MapPin, Building2, Landmark, CreditCard, Lock } from "lucide-react";
+import { cn } from "../../lib/utils";
 import Table from "../../components/ui/Table";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import FormInput from "../../components/ui/FormInput";
 import DeleteModal from "../../components/ui/DeleteModal";
+import { 
+  useGetUsersMutation, 
+  useCreateOrUpdateUserMutation, 
+  useDeleteUserMutation, 
+  useChangeUserStatusMutation 
+} from "../../redux/api/userApi";
+import { useSearchRolesQuery } from "../../redux/api/roleApi";
 
 export default function Users() {
+  const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [errors, setErrors] = useState({});
 
-  const users = [
-    { id: 1, name: "Admin Setup", role: "Super Admin", email: "admin@agro.in" },
-    { id: 2, name: "Ramesh Traders", role: "Dealer", email: "ramesh.dealer@agro.in" },
-    { id: 3, name: "Kisan Suvidha", role: "Dealer", email: "suresh.kisan@agro.in" },
-  ];
+  const [formData, setFormData] = useState({
+    name: "",
+    surname: "",
+    fathername: "",
+    gstnumber: "",
+    address: "",
+    bankname: "",
+    bankaccountnumber: "",
+    bankifsccode: "",
+    email: "",
+    countrycode: "+91",
+    mobile: "",
+    password: "",
+    roleid: ""
+  });
 
-  const columns = ["User Name", "Role", "Email", "Actions"];
+  const [getUsers, { isLoading: isFetching }] = useGetUsersMutation();
+  const [createOrUpdateUser, { isLoading: isSaving }] = useCreateOrUpdateUserMutation();
+  const [deleteUser] = useDeleteUserMutation();
+  const [changeStatus] = useChangeUserStatusMutation();
+  const { data: rolesData } = useSearchRolesQuery("");
+  const roles = rolesData?.Data || [];
+
+  const fetchData = async () => {
+    try {
+      const result = await getUsers({
+        page: 1,
+        limit: 50,
+        search: { name: searchTerm },
+        sortfield: "_id",
+        sortoption: -1,
+        roleid: "",
+        branchid: ""
+      }).unwrap();
+      if (result.IsSuccess) {
+        setUsers(result.Data.docs || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [searchTerm]);
+
+  const handleOpenModal = (user = null) => {
+    if (user) {
+      setEditingUser(user);
+      setFormData({
+        name: user.name || "",
+        surname: user.surname || "",
+        fathername: user.fathername || "",
+        gstnumber: user.gstnumber || "",
+        address: user.address || "",
+        bankname: user.bankname || "",
+        bankaccountnumber: user.bankaccountnumber || "",
+        bankifsccode: user.bankifsccode || "",
+        email: user.email || "",
+        countrycode: user.countrycode || "+91",
+        mobile: user.mobile || "",
+        password: "", // Don't populate password
+        roleid: user.roleid?._id || user.roleid || ""
+      });
+    } else {
+      setEditingUser(null);
+      setFormData({
+        name: "",
+        surname: "",
+        fathername: "",
+        gstnumber: "",
+        address: "",
+        bankname: "",
+        bankaccountnumber: "",
+        bankifsccode: "",
+        email: "",
+        countrycode: "+91",
+        mobile: "",
+        password: "",
+        roleid: ""
+      });
+    }
+    setErrors({});
+    setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    let newErrors = {};
+    if (!formData.name.trim()) newErrors.name = "First name is required";
+    if (!formData.surname.trim()) newErrors.surname = "Surname is required";
+    if (!formData.fathername.trim()) newErrors.fathername = "Father's name is required";
+    if (!formData.address.trim()) newErrors.address = "Location/Address is required";
+    if (!formData.email.trim()) newErrors.email = "Email address is required";
+    else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Invalid email format";
+    
+    if (!formData.mobile.trim()) newErrors.mobile = "Mobile number is required";
+    else if (!/^\d{10}$/.test(formData.mobile)) newErrors.mobile = "Mobile must be 10 digits";
+    
+    if (!formData.roleid) newErrors.roleid = "Please select a system role";
+    
+    if (!editingUser && !formData.password) {
+      newErrors.password = "Password is required for new accounts";
+    } else if (formData.password && formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    
+    try {
+      const payload = {
+        userid: editingUser ? editingUser._id : "",
+        ...formData
+      };
+      const result = await createOrUpdateUser(payload).unwrap();
+      if (result.IsSuccess) {
+        setIsModalOpen(false);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to save user:", err);
+    }
+  };
 
   const handleDeleteClick = (user) => {
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    console.log("Deleting user:", userToDelete);
-    setIsDeleteModalOpen(false);
-    setUserToDelete(null);
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteUser({ userid: userToDelete._id }).unwrap();
+      setIsDeleteModalOpen(false);
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+    }
   };
+
+  const handleToggleStatus = async (id) => {
+    try {
+      await changeStatus({ userid: id }).unwrap();
+      fetchData();
+    } catch (err) {
+      console.error("Failed to change status:", err);
+    }
+  };
+
+  const columns = ["User Name", "Role", "Contact", "Status", "Actions"];
 
   const renderRow = (item) => (
     <>
       <td className="px-6 py-4">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-primary-500/10 text-primary-500 border border-primary-500/20 flex items-center justify-center font-bold text-sm shadow-sm">
-            {item.name.charAt(0)}
+            {item.name?.charAt(0) || "U"}
           </div>
-          <span className="font-bold text-tmain">{item.name}</span>
+          <div>
+            <span className="font-bold text-tmain block">{item.name} {item.surname}</span>
+            <span className="text-[10px] text-tmuted uppercase tracking-wider">{item.email}</span>
+          </div>
         </div>
       </td>
       <td className="px-6 py-4">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold bg-surface text-tmuted border border-surfaceBorder">
-          <Shield size={12} className="text-tmuted/70" /> {item.role}
+          <Shield size={12} className="text-tmuted/70" /> {item.roleid?.rolename || "No Role"}
         </span>
       </td>
       <td className="px-6 py-4">
-        <span className="text-sm text-tmuted font-medium flex items-center gap-2 italic opacity-80"><Mail size={12} className="text-tmuted/70" /> {item.email}</span>
+        <div className="flex flex-col">
+          <span className="text-sm text-tmain font-medium flex items-center gap-2">
+            <Phone size={12} className="text-tmuted" /> {item.countrycode} {item.mobile}
+          </span>
+          <span className="text-[10px] text-tmuted italic flex items-center gap-2">
+             <MapPin size={10} /> {item.location || "N/A"}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <button 
+          onClick={() => handleToggleStatus(item._id)}
+          className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${
+            item.status 
+              ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
+              : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+          }`}
+        >
+          {item.status ? "Active" : "Inactive"}
+        </button>
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-          <button className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all" title="Edit">
+          <button 
+            onClick={() => handleOpenModal(item)}
+            className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all" 
+            title="Edit"
+          >
             <Edit2 size={16} />
           </button>
           <button 
@@ -70,11 +243,12 @@ export default function Users() {
     <div className="space-y-6 animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-tmain tracking-tight">Users List</h1>
+          <h1 className="text-3xl font-bold text-tmain tracking-tight font-sans">User Management</h1>
+          <p className="text-sm text-tmuted mt-1">Manage system users, contact details, and banking information.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="rounded-md px-6 py-2">
+        <Button onClick={() => handleOpenModal()} className="rounded-md px-6 py-2">
           <Plus size={18} />
-          <span>Add User</span>
+          <span>Add New User</span>
         </Button>
       </div>
 
@@ -83,7 +257,7 @@ export default function Users() {
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
           <input 
             type="text" 
-            placeholder="Search users..." 
+            placeholder="Search by name, email or mobile..." 
             className="w-full pl-11 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -94,34 +268,96 @@ export default function Users() {
       <Table 
         columns={columns} 
         data={users} 
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         renderRow={renderRow} 
+        isLoading={isFetching}
       />
 
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        title="Add New User"
+        title={editingUser ? "Edit User Account" : "Create New User Account"}
+        className="max-w-4xl"
       >
-        <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); setIsModalOpen(false); }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormInput label="Full Name" placeholder="e.g. Ramesh Singh" required />
-            <FormInput label="Email Address" type="email" placeholder="ramesh@agro.in" required />
+        <form className="space-y-8" onSubmit={handleSubmit} noValidate>
+          {/* Section: Personal Details */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-black text-form-primary uppercase tracking-[0.2em] flex items-center gap-2">
+              <UserIcon size={14} /> Personal Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <FormInput label="First Name" placeholder="e.g. Ramesh" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} error={errors.name} required />
+              <FormInput label="Surname" placeholder="e.g. Singh" value={formData.surname} onChange={(e) => setFormData({...formData, surname: e.target.value})} error={errors.surname} required />
+              <FormInput label="Father's Name" placeholder="e.g. Baldev Singh" value={formData.fathername} onChange={(e) => setFormData({...formData, fathername: e.target.value})} error={errors.fathername} required />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <FormInput label="GST Number" placeholder="22AAAAA0000A1Z5" value={formData.gstnumber} onChange={(e) => setFormData({...formData, gstnumber: e.target.value})} />
+              <div className="md:col-span-2">
+                <FormInput label="Location / Address" placeholder="City, State, Country" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} error={errors.address} required />
+              </div>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="form-label">System Role</label>
-            <select className="form-select transition-all">
-              <option value="Admin">Admin</option>
-              <option value="Dealer">Dealer</option>
-            </select>
+
+          {/* Section: Contact & Auth */}
+          <div className="space-y-4 pt-4 border-t border-surfaceBorder/50">
+            <h3 className="text-[10px] font-black text-form-primary uppercase tracking-[0.2em] flex items-center gap-2">
+              <Lock size={14} /> Contact & Authentication
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <FormInput label="Email Address" type="email" placeholder="ramesh@agro.in" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} error={errors.email} required />
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <FormInput label="Code" value={formData.countrycode} onChange={(e) => setFormData({...formData, countrycode: e.target.value})} required />
+                </div>
+                <div className="flex-1">
+                  <FormInput label="Mobile Number" placeholder="9876543210" value={formData.mobile} onChange={(e) => setFormData({...formData, mobile: e.target.value})} error={errors.mobile} required />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">System Role</label>
+                <select 
+                  className={cn(
+                    "w-full px-4 py-2.5 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain",
+                    errors.roleid && "!border-red-500 !focus:border-red-500"
+                  )}
+                  value={formData.roleid}
+                  onChange={(e) => setFormData({...formData, roleid: e.target.value})}
+                  required
+                >
+                  <option value="">Select Role</option>
+                  {roles.map(r => (
+                    <option key={r._id} value={r._id}>{r.rolename}</option>
+                  ))}
+                </select>
+                {errors.roleid && <span className="text-[11px] font-medium text-red-500 mt-1 block">{errors.roleid}</span>}
+              </div>
+            </div>
+            {!editingUser && (
+              <div className="max-w-md">
+                <FormInput label="Login Password" type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} error={errors.password} required={!editingUser} />
+              </div>
+            )}
+          </div>
+
+          {/* Section: Banking Information */}
+          <div className="space-y-4 pt-4 border-t border-surfaceBorder/50">
+            <h3 className="text-[10px] font-black text-form-primary uppercase tracking-[0.2em] flex items-center gap-2">
+              <Landmark size={14} /> Banking Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <FormInput label="Bank Name" placeholder="e.g. State Bank of India" value={formData.bankname} onChange={(e) => setFormData({...formData, bankname: e.target.value})} />
+              <FormInput label="Account Number" placeholder="00000000000" value={formData.bankaccountnumber} onChange={(e) => setFormData({...formData, bankaccountnumber: e.target.value})} />
+              <FormInput label="IFSC Code" placeholder="SBIN0000001" value={formData.bankifsccode} onChange={(e) => setFormData({...formData, bankifsccode: e.target.value})} />
+            </div>
           </div>
           
           <div className="pt-6 flex items-center justify-end gap-3 mt-8 border-t border-surfaceBorder/50">
-            <Button type="button" variant="ghost" className="rounded-md" onClick={() => setIsModalOpen(false)}>
+            <Button type="button" variant="ghost" className="rounded-md px-6" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="rounded-md px-6">
-              Save User
+            <Button type="submit" disabled={isSaving} className="rounded-md px-10 shadow-lg shadow-form-primary/20">
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
+              {editingUser ? "Update Account" : "Create Account"}
             </Button>
           </div>
         </form>
@@ -131,7 +367,7 @@ export default function Users() {
         isOpen={isDeleteModalOpen} 
         onClose={() => setIsDeleteModalOpen(false)} 
         onConfirm={handleConfirmDelete}
-        itemName={userToDelete?.name}
+        itemName={`${userToDelete?.name} ${userToDelete?.surname}`}
       />
     </div>
   );

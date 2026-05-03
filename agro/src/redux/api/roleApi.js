@@ -54,7 +54,10 @@ export const roleApi = createApi({
       invalidatesTags: ['Role'],
     }),
     searchRoles: builder.query({
-      query: (search) => `/role?search=${search}`,
+      query: (search = "") => ({
+        url: `/role?search=${search}`,
+        method: 'GET',
+      }),
       providesTags: ['Role'],
     }),
   }),

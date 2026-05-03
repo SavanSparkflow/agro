@@ -9,26 +9,27 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout, updateUser } from "../../redux/slices/authSlice";
 import { useLogoutMutation, useGetProfileQuery } from "../../redux/api/authApi";
 
-const DEALER_LINKS = [
-  { name: "Dashboard", href: "/dealer", icon: LayoutDashboard },
-  { name: "Products", href: "/dealer/products", icon: Box },
-  { name: "Categories", href: "/dealer/categories", icon: Tags },
-  { name: "Stock", href: "/dealer/stock", icon: Archive },
-  { name: "Customers", href: "/dealer/customers", icon: UserCircle },
-  { name: "Orders", href: "/dealer/orders", icon: ShoppingCart },
-  { name: "Billing", href: "/dealer/billing", icon: ReceiptIndianRupee },
-  { name: "Sales History", href: "/dealer/history", icon: Clock },
-];
+// const DEALER_LINKS = [
+//   { name: "Dashboard", href: "/dealer", icon: LayoutDashboard },
+//   // { name: "Products", href: "/dealer/products", icon: Box },
+//   // { name: "Categories", href: "/dealer/categories", icon: Tags },
+//   // { name: "Customers", href: "/dealer/customers", icon: UserCircle },
+//   // { name: "Orders", href: "/dealer/orders", icon: ShoppingCart },
+//   // { name: "Billing", href: "/dealer/billing", icon: ReceiptIndianRupee },
+//   // { name: "Sales History", href: "/dealer/history", icon: Clock },
+// ];
 
 const ADMIN_LINKS = [
   { name: "Dealers List", href: "/admin/dealers", icon: Shield },
   { name: "User List", href: "/admin/users", icon: Users },
-  { name: "Departments", href: "/admin/departments", icon: Layers },
+  { name: "Role Management", href: "/admin/roles", icon: Shield },
   { name: "Products", href: "/admin/products", icon: ShoppingBag },
   { name: "Categories", href: "/admin/categories", icon: Tags },
   { name: "Units", href: "/admin/units", icon: Scale },
-  { name: "Role Management", href: "/admin/permissions", icon: Shield },
-  { name: "User Permissions", href: "/admin/user-permissions", icon: Key },
+  { name: "Stock", href: "/admin/stock", icon: Archive },
+  { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+  { name: "Billing", href: "/admin/billing", icon: ReceiptIndianRupee },
+  { name: "Sales History", href: "/admin/history", icon: Clock },
 ];
 
 export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOpen }) {
@@ -104,7 +105,7 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
           {/* Nav Links */}
           <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2 custom-scrollbar">
             {/* Admin Links Section */}
-            {isOpen && <div className="px-2 mb-4 text-[10px] font-bold text-tmuted uppercase tracking-widest">Administrator Access</div>}
+            {/* {isOpen && <div className="px-2 mb-4 text-[10px] font-bold text-tmuted uppercase tracking-widest">Administrator Access</div>} */}
             {ADMIN_LINKS.map((link) => {
               const Icon = link.icon;
               return (
@@ -143,9 +144,9 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
               );
             })}
 
-            {isOpen && <div className="px-2 mt-8 mb-4 text-[10px] font-bold text-tmuted uppercase tracking-widest border-t border-surfaceBorder pt-6">Main Menu</div>}
+            {/* {isOpen && <div className="px-2 mt-8 mb-4 text-[10px] font-bold text-tmuted uppercase tracking-widest border-t border-surfaceBorder pt-6">Main Menu</div>} */}
 
-            {DEALER_LINKS.map((link) => {
+            {/* {DEALER_LINKS.map((link) => {
               const Icon = link.icon;
               return (
                 <NavLink
@@ -184,7 +185,7 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
                   )}
                 </NavLink>
               );
-            })}
+            })} */}
 
           </div>
 

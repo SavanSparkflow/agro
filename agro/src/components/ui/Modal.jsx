@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../lib/utils";
 
 export default function Modal({ isOpen, onClose, title, children, className }) {
@@ -14,7 +15,7 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
       {/* Premium Backdrop blur */}
       <div 
@@ -24,7 +25,7 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
       
       {/* Modal Content - Glassmorphism */}
       <div className={cn(
-        "relative w-full max-w-lg glass-card border border-surfaceBorder shadow-2xl rounded-3xl transform transition-all animate-slide-up flex flex-col max-h-[75vh]",
+        "relative w-full max-w-lg glass-card border border-surfaceBorder shadow-2xl rounded-3xl transform transition-all animate-slide-up flex flex-col max-h-[90vh] sm:max-h-[75vh]",
         className
       )}>
         {/* <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-accent" /> */}
@@ -39,10 +40,11 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
           </button>
         </div>
         
-        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 min-h-0">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

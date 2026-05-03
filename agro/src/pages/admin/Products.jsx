@@ -5,6 +5,7 @@ import Card from "../../components/ui/Card";
 import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import DeleteModal from "../../components/ui/DeleteModal";
 import { 
   useGetProductsMutation, 
   useCreateOrUpdateProductMutation, 
@@ -22,6 +23,8 @@ export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   
@@ -48,7 +51,7 @@ export default function Products() {
       const productResult = await getProducts({
         page: 1,
         limit: 50,
-        search: {},
+        search: { name: searchQuery },
         sortoption: -1
       }).unwrap();
       if (productResult.IsSuccess) setProducts(productResult.Data.docs || []);
@@ -65,15 +68,15 @@ export default function Products() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [searchQuery]);
 
   const handleOpenModal = (product = null) => {
     if (product) {
       setEditingProduct(product);
       setFormData({
-        categoryid: product.categoryid?._id || product.categoryid,
+        categoryid: product.categoryid?._id || "",
         name: product.name,
-        unit: product.unit?._id || product.unit,
+        unit: product.unit?._id || "",
         price: product.price,
         image: product.image,
         description: product.description || ""
@@ -129,14 +132,18 @@ export default function Products() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        await deleteProduct({ productid: id }).unwrap();
-        fetchData();
-      } catch (err) {
-        console.error("Failed to delete product:", err);
-      }
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteProduct({ productid: productToDelete._id }).unwrap();
+      setIsDeleteModalOpen(false);
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete product:", err);
     }
   };
 
@@ -169,6 +176,8 @@ export default function Products() {
             type="text" 
             placeholder="Search products..." 
             className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -205,7 +214,7 @@ export default function Products() {
             </td>
             <td className="px-6 py-4">
               <span className="text-[10px] font-black bg-background border border-surfaceBorder px-2 py-1 rounded uppercase text-tmuted">
-                {product.unit?.type || "Unit"}
+                {product.unit?.name || "Unit"}
               </span>
             </td>
             <td className="px-6 py-4">
@@ -232,7 +241,7 @@ export default function Products() {
                   <Edit2 size={14} />
                 </button>
                 <button 
-                  onClick={() => handleDelete(product._id)}
+                  onClick={() => handleDeleteClick(product)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Trash2 size={14} />
@@ -266,7 +275,7 @@ export default function Products() {
                     className="w-full px-4 py-2.5 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain"
                     value={formData.categoryid}
                     onChange={(e) => setFormData({ ...formData, categoryid: e.target.value })}
-                    required
+                    // required
                   >
                     <option value="">Select Category</option>
                     {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -278,10 +287,10 @@ export default function Products() {
                     className="w-full px-4 py-2.5 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    required
+                    // required
                   >
                     <option value="">Select Unit</option>
-                    {units.map(u => <option key={u._id} value={u._id}>{u.type}</option>)}
+                    {units.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -348,6 +357,13 @@ export default function Products() {
           </div>
         </form>
       </Modal>
+
+      <DeleteModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={handleConfirmDelete}
+        itemName={productToDelete?.name}
+      />
     </div>
   );
 }

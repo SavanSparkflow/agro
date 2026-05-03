@@ -5,6 +5,7 @@ import Card from "../../components/ui/Card";
 import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import DeleteModal from "../../components/ui/DeleteModal";
 import { 
   useGetUnitsMutation, 
   useCreateOrUpdateUnitMutation, 
@@ -17,9 +18,11 @@ export default function Units() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUnit, setEditingUnit] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [unitToDelete, setUnitToDelete] = useState(null);
   
   const [formData, setFormData] = useState({
-    type: "",
+    name: "",
     sequence: ""
   });
 
@@ -33,7 +36,7 @@ export default function Units() {
       const result = await getUnits({
         page: 1,
         limit: 100,
-        search: searchQuery,
+        search: { name: searchQuery },
         sortfield: "_id",
         sortoption: 1
       }).unwrap();
@@ -53,13 +56,13 @@ export default function Units() {
     if (unit) {
       setEditingUnit(unit);
       setFormData({
-        type: unit.type,
+        name: unit.name,
         sequence: unit.sequence || ""
       });
     } else {
       setEditingUnit(null);
       setFormData({
-        type: "",
+        name: "",
         sequence: units.length + 1
       });
     }
@@ -83,14 +86,18 @@ export default function Units() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this unit?")) {
-      try {
-        await deleteUnit({ unitid: id }).unwrap();
-        fetchUnits();
-      } catch (err) {
-        console.error("Failed to delete unit:", err);
-      }
+  const handleDeleteClick = (unit) => {
+    setUnitToDelete(unit);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteUnit({ unitid: unitToDelete._id }).unwrap();
+      setIsDeleteModalOpen(false);
+      fetchUnits();
+    } catch (err) {
+      console.error("Failed to delete unit:", err);
     }
   };
 
@@ -130,20 +137,20 @@ export default function Units() {
       </div>
 
       <Table 
-        columns={["Sequence", "Unit Type", "Status", "Actions"]} 
+        columns={["Sequence", "Unit Name", "Status", "Actions"]} 
         data={units} 
         keyExtractor={(item) => item._id}
-        renderRow={(unit) => (
+        renderRow={(unit,index) => (
           <>
             <td className="px-6 py-4">
-              <span className="text-xs font-bold text-tmuted">#{unit.sequence}</span>
+              <span className="text-xs font-bold text-tmuted">{index + 1}</span>
             </td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary-500/10 text-primary-500 rounded-lg border border-primary-500/20">
                   <Scale size={16} />
                 </div>
-                <span className="font-bold text-tmain text-sm uppercase">{unit.type}</span>
+                <span className="font-bold text-tmain text-sm uppercase">{unit.name}</span>
               </div>
             </td>
             <td className="px-6 py-4">
@@ -167,7 +174,7 @@ export default function Units() {
                   <Edit2 size={14} />
                 </button>
                 <button 
-                  onClick={() => handleDelete(unit._id)}
+                  onClick={() => handleDeleteClick(unit)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Trash2 size={14} />
@@ -186,10 +193,10 @@ export default function Units() {
       >
         <form className="space-y-6" onSubmit={handleSubmit}>
           <FormInput 
-            label="Unit Type" 
+            label="Unit Name" 
             placeholder="e.g. KG, LTR, PKT" 
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required 
           />
           <FormInput 
@@ -209,6 +216,13 @@ export default function Units() {
           </div>
         </form>
       </Modal>
+
+      <DeleteModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={handleConfirmDelete}
+        itemName={unitToDelete?.name}
+      />
     </div>
   );
 }

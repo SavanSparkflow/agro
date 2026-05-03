@@ -12,10 +12,8 @@ import Orders from "./pages/Orders";
 import SalesHistory from "./pages/SalesHistory";
 import Dealers from "./pages/admin/Dealers";
 import Users from "./pages/admin/Users";
-import FeedbackList from "./pages/admin/FeedbackList";
 import RoleManagement from "./pages/admin/RoleManagement";
-import UserPermissionManagement from "./pages/admin/UserPermissionManagement";
-import Departments from "./pages/admin/Departments";
+import FeedbackList from "./pages/admin/FeedbackList";
 import AdminProducts from "./pages/admin/Products";
 import AdminCategories from "./pages/admin/Categories";
 import AdminUnits from "./pages/admin/Units";
@@ -54,26 +52,27 @@ export default function App() {
         }>
           <Route index element={<Dashboard />} />
           <Route path="dealer" element={<Dashboard />} />
-          <Route path="dealer/orders" element={<Orders />} />
+          {/* <Route path="dealer/orders" element={<Orders />} />
           <Route path="dealer/customers" element={<Customers />} />
           <Route path="dealer/products" element={<Products />} />
           <Route path="dealer/categories" element={<Categories />} />
           <Route path="dealer/stock" element={<Stock />} />
           <Route path="dealer/billing" element={<Billing />} />
           <Route path="dealer/history" element={<SalesHistory />} />
-          <Route path="dealer/feedback" element={<Feedback />} />
+          <Route path="dealer/feedback" element={<Feedback />} /> */}
           <Route path="profile" element={<Profile />} />
           
           {/* Admin Flow */}
           <Route path="admin/dealers" element={<Dealers />} />
           <Route path="admin/users" element={<Users />} />
-          <Route path="admin/departments" element={<Departments />} />
+          <Route path="admin/roles" element={<RoleManagement />} />
           <Route path="admin/feedback" element={<FeedbackList />} />
-          <Route path="admin/permissions" element={<RoleManagement />} />
-          <Route path="admin/user-permissions" element={<UserPermissionManagement />} />
           <Route path="admin/products" element={<AdminProducts />} />
           <Route path="admin/categories" element={<AdminCategories />} />
           <Route path="admin/units" element={<AdminUnits />} />
+          <Route path="admin/stock" element={<Stock />} />
+          <Route path="admin/billing" element={<Billing />} />
+          <Route path="admin/orders" element={<Orders />} />
           <Route path="customers" element={<Customers />} />
           <Route path="reports" element={<div className="p-4 text-theme-muted">Reports Page (Coming Soon)</div>} />
 

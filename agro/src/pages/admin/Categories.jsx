@@ -5,6 +5,7 @@ import Card from "../../components/ui/Card";
 import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import DeleteModal from "../../components/ui/DeleteModal";
 import { 
   useGetCategoriesMutation, 
   useCreateOrUpdateCategoryMutation, 
@@ -17,6 +18,8 @@ export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   
   const [formData, setFormData] = useState({
     name: ""
@@ -32,7 +35,7 @@ export default function Categories() {
       const result = await getCategories({
         page: 1,
         limit: 100,
-        search: searchQuery,
+        search: { name: searchQuery },
         sortfield: "_id",
         sortoption: 1
       }).unwrap();
@@ -80,14 +83,18 @@ export default function Categories() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      try {
-        await deleteCategory({ categoryid: id }).unwrap();
-        fetchCategories();
-      } catch (err) {
-        console.error("Failed to delete category:", err);
-      }
+  const handleDeleteClick = (category) => {
+    setCategoryToDelete(category);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteCategory({ categoryid: categoryToDelete._id }).unwrap();
+      setIsDeleteModalOpen(false);
+      fetchCategories();
+    } catch (err) {
+      console.error("Failed to delete category:", err);
     }
   };
 
@@ -161,7 +168,7 @@ export default function Categories() {
                   <Edit2 size={14} />
                 </button>
                 <button 
-                  onClick={() => handleDelete(category._id)}
+                  onClick={() => handleDeleteClick(category)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Trash2 size={14} />
@@ -196,6 +203,13 @@ export default function Categories() {
           </div>
         </form>
       </Modal>
+
+      <DeleteModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={handleConfirmDelete}
+        itemName={categoryToDelete?.name}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Edit2, Trash2, Filter, ChevronDown } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Filter, ChevronDown, Shield } from "lucide-react";
 import Table from "../components/ui/Table";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
@@ -7,25 +7,11 @@ import FormInput from "../components/ui/FormInput";
 import FormSelect from "../components/ui/FormSelect";
 import FormTextarea from "../components/ui/FormTextarea";
 import DeleteModal from "../components/ui/DeleteModal";
-import { usePermission } from "../context/PermissionContext";
 
 export default function Products() {
-  const { can } = usePermission();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
-
-  if (!can('Products', 'view')) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] glass rounded-3xl p-12 text-center">
-        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
-          <Shield size={40} />
-        </div>
-        <h2 className="text-2xl font-bold text-tmain">Restricted Access</h2>
-        <p className="text-tmuted mt-2 max-w-sm">You do not have permission to view the Products module. Please contact your administrator.</p>
-      </div>
-    );
-  }
 
   const products = [
     { id: 1, name: "Urea Fertilizer", category: "Fertilizer", price: "₹266", stock: "In Stock", unit: "50kg bag", image: "https://images.unsplash.com/photo-1592982537447-6f2334f5aa0f?auto=format&fit=crop&q=80&w=100&h=100" },
@@ -73,19 +59,15 @@ export default function Products() {
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-          {can('Products', 'edit') && (
-            <button className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all">
-              <Edit2 size={14} />
-            </button>
-          )}
-          {can('Products', 'delete') && (
-            <button 
-              onClick={() => handleDeleteClick(item)}
-              className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
+          <button className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all">
+            <Edit2 size={14} />
+          </button>
+          <button 
+            onClick={() => handleDeleteClick(item)}
+            className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       </td>
     </>
@@ -97,38 +79,34 @@ export default function Products() {
         <div>
           <h1 className="text-3xl font-bold text-tmain tracking-tight">Products</h1>
         </div>
-        {can('Products', 'create') && (
-          <Button onClick={() => setIsModalOpen(true)} className="rounded-md px-6 py-2">
-            <Plus size={18} />
-            <span>Add Product</span>
-          </Button>
-        )}
+        <Button onClick={() => setIsModalOpen(true)} className="rounded-md px-6 py-2">
+          <Plus size={18} />
+          <span>Add Product</span>
+        </Button>
       </div>
 
-      {can('Products', 'search') && (
-        <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
-          <div className="relative w-full sm:w-80 group">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search products..." 
-              className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
-            />
-          </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-none">
-              <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
-              <select className="w-full sm:w-48 pl-10 pr-10 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none appearance-none text-tmain shadow-sm transition-all hover:bg-surface/80 cursor-pointer">
-                <option value="">All Categories</option>
-                <option value="seeds">Seeds</option>
-                <option value="fertilizers">Fertilizers</option>
-                <option value="pesticides">Pesticides</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
-            </div>
+      <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
+        <div className="relative w-full sm:w-80 group">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search products..." 
+            className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
+          />
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
+            <select className="w-full sm:w-48 pl-10 pr-10 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none appearance-none text-tmain shadow-sm transition-all hover:bg-surface/80 cursor-pointer">
+              <option value="">All Categories</option>
+              <option value="seeds">Seeds</option>
+              <option value="fertilizers">Fertilizers</option>
+              <option value="pesticides">Pesticides</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
           </div>
         </div>
-      )}
+      </div>
 
       <Table columns={columns} data={products} keyExtractor={(item) => item.id} renderRow={renderRow} />
 

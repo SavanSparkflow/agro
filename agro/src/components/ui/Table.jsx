@@ -23,7 +23,7 @@ export default function Table({ columns, data, keyExtractor, renderRow }) {
                 key={keyExtractor ? keyExtractor(item) : i} 
                 className="hover:bg-surface/50 transition-all duration-300 group"
               >
-                {renderRow(item)}
+                {renderRow(item, i)}
               </tr>
             ))
           ) : (
