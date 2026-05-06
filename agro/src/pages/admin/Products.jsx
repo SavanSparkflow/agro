@@ -24,6 +24,7 @@ export default function Products() {
   const [productToDelete, setProductToDelete] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [changingStatusId, setChangingStatusId] = useState(null);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -137,11 +138,16 @@ export default function Products() {
   };
 
   const handleToggleStatus = async (id) => {
+    setChangingStatusId(id);
     try {
-      await dispatch(changeProductStatus(id)).unwrap();
-      fetchData();
+      const result = await dispatch(changeProductStatus(id)).unwrap();
+      if (result.IsSuccess) {
+        fetchData();
+      }
     } catch (err) {
       console.error("Failed to change status:", err);
+    } finally {
+      setChangingStatusId(null);
     }
   };
 
@@ -212,12 +218,18 @@ export default function Products() {
             <td className="px-6 py-4">
               <button 
                 onClick={() => handleToggleStatus(product._id)}
-                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${
+                disabled={changingStatusId === product._id}
+                className={`relative group px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all duration-300 flex items-center gap-2 min-w-[85px] justify-center ${
                   product.status 
-                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
-                    : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20' 
+                    : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20'
                 }`}
               >
+                {changingStatusId === product._id ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${product.status ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                )}
                 {product.status ? "Active" : "Inactive"}
               </button>
             </td>

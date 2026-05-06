@@ -61,6 +61,18 @@ export const deleteCustomer = createAsyncThunk(
   }
 );
 
+export const submitCustomerFeedback = createAsyncThunk(
+  "customer/submitFeedback",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await customerService.submitFeedback(payload);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 export const changeCustomerStatus = createAsyncThunk(
   "customer/changeCustomerStatus",
   async (id, { rejectWithValue }) => {

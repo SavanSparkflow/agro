@@ -1,59 +1,92 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Trash2, ShieldCheck, MapPin, Search, ExternalLink, Mail, Phone, FileText, CreditCard, Loader2, Users } from "lucide-react";
+import { Plus, Trash2, ShieldCheck, MapPin, Search, ExternalLink, Mail, Phone, FileText, CreditCard, Loader2, Users, Pencil } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
 import FormInput from "../../components/ui/FormInput";
 import Table from "../../components/ui/Table";
-import { fetchDistributors, getDistributor, createDistributor, deleteDistributor, changeDistributorStatus } from "../../redux/slices/distributorSlice";
+import { fetchUsers, getUser, createUser, deleteUser, changeUserStatus } from "../../redux/slices/userSlice";
+import { fetchRolesWOP } from "../../redux/slices/roleSlice";
+import { fetchCustomersWOP } from "../../redux/slices/customerSlice";
+import DeleteModal from "../../components/ui/DeleteModal";
+import { cn } from "../../lib/utils";
 
 const mockCustomers = {};
 
 export default function Dealers() {
   const dispatch = useDispatch();
-  const { distributors, loading: isFetching } = useSelector((state) => state.distributor);
+  const { users: dealers, loading: isFetching } = useSelector((state) => state.user);
+  const { rolesWOP: roles } = useSelector((state) => state.role);
+  const { customersWOP } = useSelector((state) => state.customer);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingDealer, setEditingDealer] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [dealerToDelete, setDealerToDelete] = useState(null);
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [currentDealer, setCurrentDealer] = useState(null);
 
   const columns = ["Dealer Name", "GST", "Phone", "Location", "Bank", "IFSC", "A/C Number", "Customers", "Actions"];
 
-  const filteredDealers = distributors.filter(dealer => 
-    dealer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dealer.phone.includes(searchTerm)
+  const filteredDealers = dealers.filter(dealer => 
+    (dealer.name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (dealer.mobile?.includes(searchTerm))
   );
 
   const [formData, setFormData] = useState({
     name: "",
-    gstNumber: "",
-    owner: "",
-    phone: "",
+    surname: "",
+    fathername: "",
+    gstnumber: "",
+    mobile: "",
     email: "",
+    countrycode: "+91",
     password: "",
-    location: "",
-    bankName: "",
-    ifscCode: "",
-    accountNumber: ""
+    address: "",
+    bankname: "",
+    bankifsccode: "",
+    bankaccountnumber: "",
+    roleid: ""
   });
 
+  // Find the exact 'Dealer' role ID from the system roles
+  const dealerRole = roles.find(r => r.rolename === 'Dealer')?._id || roles.find(r => r.rolename?.toLowerCase().includes('dealer'))?._id || "";
+
   const fetchData = async () => {
-    dispatch(fetchDistributors({
+    dispatch(fetchUsers({
       page: 1,
       limit: 50,
       search: { name: searchTerm },
-      sortoption: -1
+      sortfield: "_id",
+      sortoption: -1,
+      roleid: dealerRole,
+      branchid: ""
     }));
   };
 
   useEffect(() => {
-    fetchData();
-  }, [searchTerm]);
+    dispatch(fetchRolesWOP(""));
+  }, []);
+
+  useEffect(() => {
+    if (dealerRole || !roles.length) {
+      fetchData();
+    }
+  }, [searchTerm, dealerRole]);
+
+  useEffect(() => {
+    if (isCustomerModalOpen) {
+      dispatch(fetchCustomersWOP(""));
+    }
+  }, [isCustomerModalOpen]);
+
+  const dealerCustomers = (customersWOP?.docs || customersWOP || []).filter(cust => 
+    cust.distributorid?._id === currentDealer?._id || cust.distributorid === currentDealer?._id
+  );
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -63,20 +96,23 @@ export default function Dealers() {
   const handleOpenModal = async (dealer = null) => {
     if (dealer) {
       try {
-        const result = await dispatch(getDistributor(dealer._id)).unwrap();
+        const result = await dispatch(getUser(dealer._id)).unwrap();
         const dealerData = result.Data;
         setEditingDealer(dealerData);
         setFormData({
           name: dealerData.name || "",
-          gstNumber: dealerData.gstNumber || "",
-          owner: dealerData.owner || "",
-          phone: dealerData.phone || "",
+          surname: dealerData.surname || "",
+          fathername: dealerData.fathername || "",
+          gstnumber: dealerData.gstnumber || "",
+          mobile: dealerData.mobile || "",
           email: dealerData.email || "",
-          password: "",
-          location: dealerData.location || "",
-          bankName: dealerData.bankName || "",
-          ifscCode: dealerData.ifscCode || "",
-          accountNumber: dealerData.accountNumber || ""
+          countrycode: dealerData.countrycode || "+91",
+          password: dealerData.password || "",
+          address: dealerData.address || "",
+          bankname: dealerData.bankname || "",
+          bankifsccode: dealerData.bankifsccode || "",
+          bankaccountnumber: dealerData.bankaccountnumber || "",
+          roleid: dealerData.roleid?._id || dealerData.roleid || dealerRole
         });
       } catch (err) {
         console.error("Failed to fetch dealer details:", err);
@@ -85,15 +121,18 @@ export default function Dealers() {
       setEditingDealer(null);
       setFormData({
         name: "",
-        gstNumber: "",
-        owner: "",
-        phone: "",
+        surname: "",
+        fathername: "",
+        gstnumber: "",
+        mobile: "",
         email: "",
+        countrycode: "+91",
         password: "",
-        location: "",
-        bankName: "",
-        ifscCode: "",
-        accountNumber: ""
+        address: "",
+        bankname: "",
+        bankifsccode: "",
+        bankaccountnumber: "",
+        roleid: dealerRole
       });
     }
     setIsModalOpen(true);
@@ -104,10 +143,11 @@ export default function Dealers() {
     setIsSaving(true);
     try {
       const payload = {
-        distributorid: editingDealer ? editingDealer._id : "",
-        ...formData
+        userid: editingDealer ? editingDealer._id : "",
+        ...formData,
+        roleid: formData.roleid || dealerRole
       };
-      const result = await dispatch(createDistributor(payload)).unwrap();
+      const result = await dispatch(createUser(payload)).unwrap();
       if (result.IsSuccess) {
         setIsModalOpen(false);
         fetchData();
@@ -120,8 +160,17 @@ export default function Dealers() {
   };
 
   const handleDeleteClick = (dealer) => {
-    if (window.confirm("Are you sure you want to delete this dealer?")) {
-      dispatch(deleteDistributor(dealer._id)).then(() => fetchData());
+    setDealerToDelete(dealer);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await dispatch(deleteUser(dealerToDelete._id)).unwrap();
+      setIsDeleteModalOpen(false);
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete dealer:", err);
     }
   };
 
@@ -132,33 +181,33 @@ export default function Dealers() {
           <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 border border-primary-500/20 flex items-center justify-center font-bold text-sm shadow-sm">
             <ShieldCheck size={18} />
           </div>
-          <span className="font-bold text-tmain block">{item.name}</span>
+          <span className="font-bold text-tmain block">{item.name} {item.surname || ""}</span>
         </div>
       </td>
       <td className="px-6 py-4 text-xs font-bold text-primary-500">
         <span className="bg-primary-500/10 px-2 py-1 rounded-md border border-primary-500/20">
-          {item.gstNumber || "N/A"}
+          {item.gstnumber || "N/A"}
         </span>
       </td>
       <td className="px-6 py-4 text-sm text-tmuted font-medium whitespace-nowrap">
-        {item.phone}
+        {item.mobile}
       </td>
       <td className="px-6 py-4">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface text-tmuted border border-surfaceBorder">
-           <MapPin size={12} className="text-tmuted/70" /> {item.location}
+           <MapPin size={12} className="text-tmuted/70" /> {item.address || item.location || "N/A"}
         </span>
       </td>
       <td className="px-6 py-4 text-sm font-bold text-tmain whitespace-nowrap">
-        {item.bankName || "N/A"}
+        {item.bankname || "N/A"}
       </td>
       <td className="px-6 py-4 text-xs font-mono text-tmuted">
-        {item.ifscCode || "N/A"}
+        {item.bankifsccode || "N/A"}
       </td>
       <td className="px-6 py-4 text-xs font-mono text-tmuted">
-        {item.accountNumber || "N/A"}
+        {item.bankaccountnumber || "N/A"}
       </td>
       <td className="px-6 py-4 font-black text-emerald-500 text-lg">
-        {item.activeCustomers || 0}
+        {item.customerCount || 0}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-2">
@@ -167,7 +216,7 @@ export default function Dealers() {
             className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
             title="Edit"
           >
-            <Plus size={16} className="rotate-45" /> {/* Using Plus as Edit icon placeholder or just import Edit2 */}
+            <Pencil size={16} /> {/* Using Plus as Edit icon placeholder or just import Edit2 */}
           </button>
           <button 
             onClick={() => handleDeleteClick(item)}
@@ -238,17 +287,17 @@ export default function Dealers() {
                   <ShieldCheck size={24} />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-tmain leading-tight line-clamp-1">{item.name}</h3>
-                  <p className="text-xs text-tmuted font-medium mt-0.5 italic">Owner: {item.owner}</p>
+                  <h3 className="font-extrabold text-tmain leading-tight line-clamp-1">{item.name} {item.surname || ""}</h3>
+                  <p className="text-xs text-tmuted font-medium mt-0.5 italic">Father: {item.fathername || "N/A"}</p>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 shrink-0">
-                  {item.activeCustomers || 0} CUST
+                  {item.customerCount || 0} CUST
                 </span>
                 <div className="flex gap-2">
                   <button onClick={() => handleOpenModal(item)} className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 rounded-lg border border-surfaceBorder shadow-sm">
-                    <Plus size={14} className="rotate-45" />
+                    <Pencil size={14} />
                   </button>
                   <button onClick={() => handleDeleteClick(item)} className="p-1.5 text-tmuted hover:text-red-500 bg-surface/50 rounded-lg border border-surfaceBorder shadow-sm">
                     <Trash2 size={14} />
@@ -264,23 +313,23 @@ export default function Dealers() {
               </div>
               <div className="flex items-center gap-2 text-[13px] text-tmuted font-medium">
                 <Phone size={14} className="opacity-50" />
-                <span>{item.phone}</span>
+                <span>{item.mobile}</span>
               </div>
               <div className="flex items-center gap-2 text-[13px] text-tmuted font-medium">
                 <MapPin size={14} className="opacity-50" />
-                <span>{item.location}</span>
+                <span>{item.address || item.location}</span>
               </div>
               <div className="flex items-center gap-2 text-[13px] font-bold text-primary-500">
                 <FileText size={14} className="opacity-70" />
-                <span className="tracking-tight">{item.gstNumber || "N/A"}</span>
+                <span className="tracking-tight">{item.gstnumber || "N/A"}</span>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-1">
                <div className="flex items-center gap-2 text-[11px] font-bold text-tmuted/70 uppercase tracking-wider">
-                  <CreditCard size={12} /> {item.bankName || "N/A"}
+                  <CreditCard size={12} /> {item.bankname || "N/A"}
                </div>
-               <div className="text-[11px] text-tmuted/50 font-medium">A/C: {item.accountNumber || "N/A"}</div>
+               <div className="text-[11px] text-tmuted/50 font-medium">A/C: {item.bankaccountnumber || "N/A"}</div>
             </div>
 
             <Button 
@@ -314,36 +363,53 @@ export default function Dealers() {
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <FormInput 
-              label="Dealer Name" 
-              placeholder="e.g. Ramesh Traders" 
+              label="First Name" 
+              placeholder="e.g. Ramesh" 
               name="name"
               value={formData.name}
               onChange={handleInputChange}
               required 
             />
             <FormInput 
-              label="GST Number" 
-              placeholder="e.g. 02AAAAA0000A1Z5" 
-              name="gstNumber"
-              value={formData.gstNumber}
+              label="Surname" 
+              placeholder="e.g. Singh" 
+              name="surname"
+              value={formData.surname}
               onChange={handleInputChange}
               required 
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <FormInput 
-              label="Phone" 
+              label="Father Name" 
+              placeholder="e.g. Baldev Singh" 
+              name="fathername"
+              value={formData.fathername}
+              onChange={handleInputChange}
+              required 
+            />
+            <FormInput 
+              label="GST Number" 
+              placeholder="e.g. 02AAAAA0000A1Z5" 
+              name="gstnumber"
+              value={formData.gstnumber}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormInput 
+              label="Mobile" 
               placeholder="e.g. 9876543210" 
-              name="phone"
-              value={formData.phone}
+              name="mobile"
+              value={formData.mobile}
               onChange={handleInputChange}
               required 
             />
              <FormInput 
             label="Location" 
             placeholder="e.g. Palampur" 
-            name="location"
-            value={formData.location}
+            name="address"
+            value={formData.address}
             onChange={handleInputChange}
             required 
           />
@@ -360,7 +426,7 @@ export default function Dealers() {
               required 
             />
             <FormInput 
-              type="password" 
+              type="text" 
               label="Dealer Assigned Password" 
               placeholder="••••••••" 
               name="password"
@@ -377,27 +443,24 @@ export default function Dealers() {
               <FormInput 
                 label="Bank Name" 
                 placeholder="e.g. HDFC Bank" 
-                name="bankName"
-                value={formData.bankName}
+                name="bankname"
+                value={formData.bankname}
                 onChange={handleInputChange}
-                required 
               />
               <FormInput 
                 label="IFSC Code" 
                 placeholder="e.g. HDFC0001234" 
-                name="ifscCode"
-                value={formData.ifscCode}
+                name="bankifsccode"
+                value={formData.bankifsccode}
                 onChange={handleInputChange}
-                required 
               />
             </div>
             <FormInput 
               label="Account Number" 
               placeholder="e.g. 50100234567890" 
-              name="accountNumber"
-              value={formData.accountNumber}
+              name="bankaccountnumber"
+              value={formData.bankaccountnumber}
               onChange={handleInputChange}
-              required 
             />
           </div>
           
@@ -420,8 +483,8 @@ export default function Dealers() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
-            {(mockCustomers[currentDealer?._id] || []).length > 0 ? (
-              mockCustomers[currentDealer?._id].map((cust) => (
+            {dealerCustomers.length > 0 ? (
+              dealerCustomers.map((cust) => (
                 <div key={cust.id} className="p-4 glass rounded-2xl flex items-center justify-between group hover:border-primary-500/30 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-surfaceBorder flex items-center justify-center text-primary-500 group-hover:bg-primary-500 group-hover:text-white transition-all">
@@ -430,15 +493,15 @@ export default function Dealers() {
                     <div>
                       <h4 className="font-bold text-tmain leading-tight">{cust.name}</h4>
                       <div className="flex items-center gap-3 mt-1 text-[11px] text-tmuted font-medium italic">
-                        <span className="flex items-center gap-1"><MapPin size={10} /> {cust.location}</span>
+                        <span className="flex items-center gap-1"><MapPin size={10} /> {cust.address || cust.village || cust.email}</span>
                         <span className="w-1 h-1 rounded-full bg-tmuted/30"></span>
-                        <span className="flex items-center gap-1"><Phone size={10} /> {cust.phone}</span>
+                        <span className="flex items-center gap-1"><Phone size={10} /> {cust.mobile}</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] uppercase tracking-wider font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">Active Account</span>
-                    <p className="text-[10px] text-tmuted mt-1">Joined {cust.joined}</p>
+                    <p className="text-[10px] text-tmuted mt-1">Joined {cust.createdAt ? new Date(cust.createdAt).toLocaleDateString() : "N/A"}</p>
                   </div>
                 </div>
               ))
@@ -462,6 +525,13 @@ export default function Dealers() {
           </div>
         </div>
       </Modal>
+
+      <DeleteModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={handleConfirmDelete}
+        itemName={dealerToDelete ? `${dealerToDelete.name} ${dealerToDelete.surname || ""}` : ""}
+      />
     </div>
   );
 }

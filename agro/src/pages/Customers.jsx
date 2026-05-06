@@ -4,7 +4,7 @@ import Table from "../components/ui/Table";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchCustomers } from "../redux/slices/customerSlice";
+import { fetchCustomers, submitCustomerFeedback } from "../redux/slices/customerSlice";
 import { cn } from "../lib/utils";
 
 export default function Customers() {
@@ -21,8 +21,9 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [reply, setReply] = useState("");
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
 
-  const columns = ["Customer Name", "Mobile", "Village / Address"];
+  const columns = ["Customer Name", "Contact", "Location / Email", "Dealer", "Latest Feedback"];
 
   const fetchData = async () => {
     const payload = {
@@ -45,6 +46,29 @@ export default function Customers() {
     fetchData();
   }, [currentPage, limit, searchTerm, fromDate, toDate]);
 
+  const handleSaveFeedback = async () => {
+    if (!feedback.trim()) return;
+    
+    setIsSavingFeedback(true);
+    try {
+      const result = await dispatch(submitCustomerFeedback({
+        customerid: selectedCustomer._id,
+        feedback: feedback
+      })).unwrap();
+      
+      if (result.IsSuccess) {
+        setIsFeedbackModalOpen(false);
+        setFeedback("");
+        setReply("");
+        fetchData(); // Refresh list to show new feedback count if applicable
+      }
+    } catch (err) {
+      console.error("Failed to save feedback:", err);
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalRecords / limit);
 
   const renderRow = (item) => (
@@ -54,22 +78,47 @@ export default function Customers() {
           <div className="w-10 h-10 rounded-full bg-primary-500/10 text-primary-400 border border-primary-500/20 flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-110 transition-transform">
             {item.name?.charAt(0) || "C"}
           </div>
-          <button 
-            onClick={() => {
-              setSelectedCustomer(item);
-              setIsFeedbackModalOpen(true);
-            }}
-            className="font-bold text-tmain text-left hover:text-primary-500 transition-colors border-b border-dashed border-tmuted/20 hover:border-primary-500/50 pb-0.5"
-          >
-            {item.name}
-          </button>
+          <div className="flex flex-col">
+            <button 
+              onClick={() => {
+                setSelectedCustomer(item);
+                setFeedback(item.feedback || "");
+                setIsFeedbackModalOpen(true);
+              }}
+              className="font-bold text-tmain text-left hover:text-primary-500 transition-colors border-b border-dashed border-tmuted/20 hover:border-primary-500/50 pb-0.5 w-fit"
+            >
+              {item.name}
+            </button>
+            <span className="text-[10px] text-tmuted font-medium uppercase tracking-wider mt-1">ID: {item._id?.slice(-8)}</span>
+          </div>
         </div>
       </td>
-      <td className="px-6 py-4 text-tmuted font-medium text-sm">{item.mobile}</td>
       <td className="px-6 py-4">
-        <span className="inline-flex items-center px-3 py-1 rounded text-[11px] font-bold bg-surface text-tmuted border border-surfaceBorder whitespace-nowrap">
-          {item.village || item.address || "N/A"}
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-tmain">{item.countrycode} {item.mobile}</span>
+          <span className="text-[11px] text-tmuted italic">{item.email?.includes('@') ? item.email : ""}</span>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <span className="inline-flex items-center px-3 py-1 rounded text-[11px] font-bold bg-surface text-tmuted border border-surfaceBorder whitespace-nowrap max-w-[200px] truncate" title={item.village || item.address || item.email}>
+          {item.village || item.address || (item.email?.includes('@') ? "N/A" : item.email) || "N/A"}
         </span>
+      </td>
+      <td className="px-6 py-4">
+        {item.distributorid?.name ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase tracking-tight">
+            <CornerUpRight size={10} /> {item.distributorid.name}
+          </span>
+        ) : (
+          <span className="text-[10px] font-bold text-tmuted/40 italic uppercase tracking-widest">No Dealer</span>
+        )}
+      </td>
+      <td className="px-6 py-4">
+        <div className="max-w-[180px]">
+          <p className="text-[11px] text-tmuted line-clamp-2 italic leading-relaxed" title={item.feedback}>
+            {item.feedback ? `"${item.feedback}"` : "No feedback yet"}
+          </p>
+        </div>
       </td>
     </>
   );
@@ -248,12 +297,11 @@ export default function Customers() {
              </Button>
              <Button 
                className="bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/20 px-8"
-               onClick={() => {
-                 console.log("Saving Feedback for:", selectedCustomer?.name, { feedback, reply });
-                 setIsFeedbackModalOpen(true);
-               }}
+               onClick={handleSaveFeedback}
+               disabled={isSavingFeedback || !feedback.trim()}
               >
-               Save
+               {isSavingFeedback ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+               Save Feedback
              </Button>
           </div>
         </div>

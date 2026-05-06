@@ -34,4 +34,9 @@ export const customerService = {
     clearCache("customer");
     return response.data;
   },
+
+  submitFeedback: async (payload) => {
+    const response = await apiInstance.post(`/api/customer/feedback`, payload);
+    return response.data;
+  },
 };
