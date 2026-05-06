@@ -2,51 +2,38 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Box, ChevronDown, Loader2, Calendar, IndianRupee, Hash, User, Trash2 } from "lucide-react";
 import Table from "../components/ui/Table";
 import Button from "../components/ui/Button";
-import { 
-  useGetOrdersMutation, 
-  useChangeOrderStatusMutation,
-  useDeleteOrderMutation
-} from "../redux/api/orderApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchOrders, changeOrderStatus, deleteOrder } from "../redux/slices/orderSlice";
 import { format } from "date-fns";
 
 export default function Orders() {
+  const dispatch = useDispatch();
+  const { orders, loading: isFetching } = useSelector((state) => state.order);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [orders, setOrders] = useState([]);
-  
-  const [getOrders, { isLoading: isFetching }] = useGetOrdersMutation();
-  const [changeStatus] = useChangeOrderStatusMutation();
-  const [deleteOrder] = useDeleteOrderMutation();
 
   const fetchData = async () => {
-    try {
-      const result = await getOrders({
-        page: 1,
-        limit: 50,
-        search: searchTerm ? { orderno: searchTerm } : {},
-        distributorid: [],
-        customerid: [],
-        orderno: [],
-        deliverydate: [],
-        totalamount: [],
-        sortoption: -1
-      }).unwrap();
-      
-      if (result.IsSuccess) {
-        setOrders(result.Data.docs || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
-    }
+    dispatch(fetchOrders({
+      page: 1,
+      limit: 50,
+      search: searchTerm ? { orderno: searchTerm } : {},
+      distributorid: [],
+      customerid: [],
+      orderno: [],
+      deliverydate: [],
+      totalamount: [],
+      sortoption: -1
+    }));
   };
 
   useEffect(() => {
     fetchData();
-  }, [searchTerm]); // Fetch on search term change
+  }, [searchTerm]);
 
   const handleStatusChange = async (orderid, newStatus) => {
     try {
-      const result = await changeStatus({ orderid, status: newStatus }).unwrap();
+      const result = await dispatch(changeOrderStatus({ orderid, status: newStatus })).unwrap();
       if (result.IsSuccess) {
         fetchData();
       }
@@ -58,7 +45,7 @@ export default function Orders() {
   const handleDelete = async (orderid) => {
     if (window.confirm("Are you sure you want to delete this order?")) {
       try {
-        const result = await deleteOrder({ orderid }).unwrap();
+        const result = await dispatch(deleteOrder(orderid)).unwrap();
         if (result.IsSuccess) {
           fetchData();
         }

@@ -1,32 +1,28 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { authApi } from './api/authApi';
-import { roleApi } from './api/roleApi';
-import { productApi } from './api/productApi';
-import { categoryApi } from './api/categoryApi';
-import { unitApi } from './api/unitApi';
-import { userApi } from './api/userApi';
-import { orderApi } from './api/orderApi';
 import authReducer from './slices/authSlice';
+import roleReducer from './slices/roleSlice';
+import productReducer from './slices/productSlice';
+import categoryReducer from './slices/categorySlice';
+import unitReducer from './slices/unitSlice';
+import userReducer from './slices/userSlice';
+import orderReducer from './slices/orderSlice';
+import customerReducer from './slices/customerSlice';
+import distributorReducer from './slices/distributorSlice';
 
 export const store = configureStore({
   reducer: {
-    [authApi.reducerPath]: authApi.reducer,
-    [roleApi.reducerPath]: roleApi.reducer,
-    [productApi.reducerPath]: productApi.reducer,
-    [categoryApi.reducerPath]: categoryApi.reducer,
-    [unitApi.reducerPath]: unitApi.reducer,
-    [userApi.reducerPath]: userApi.reducer,
-    [orderApi.reducerPath]: orderApi.reducer,
     auth: authReducer,
+    role: roleReducer,
+    product: productReducer,
+    category: categoryReducer,
+    unit: unitReducer,
+    user: userReducer,
+    order: orderReducer,
+    customer: customerReducer,
+    distributor: distributorReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
-      authApi.middleware, 
-      roleApi.middleware,
-      productApi.middleware,
-      categoryApi.middleware,
-      unitApi.middleware,
-      userApi.middleware,
-      orderApi.middleware
-    ),
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
 });

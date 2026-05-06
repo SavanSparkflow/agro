@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, AlertCircle } from "lucide-react";
 import Table from "../components/ui/Table";
 import Button from "../components/ui/Button";
@@ -6,15 +6,29 @@ import Modal from "../components/ui/Modal";
 import FormInput from "../components/ui/FormInput";
 import FormSelect from "../components/ui/FormSelect";
 
-export default function Stock() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProductsWOP } from "../redux/slices/productSlice";
 
-  const stockData = [
-    { id: 1, name: "Urea Fertilizer", stock: 150, unit: "bag", status: "In Stock" },
-    { id: 2, name: "DAP", stock: 15, unit: "bag", status: "Low Stock" },
-    { id: 3, name: "Tomato Seeds", stock: 0, unit: "packet", status: "Out of Stock" },
-    { id: 4, name: "Pesticide A", stock: 45, unit: "liter", status: "In Stock" },
-  ];
+export default function Stock() {
+  const dispatch = useDispatch();
+  const { productsWOP: products, loading } = useSelector((state) => state.product);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    dispatch(fetchProductsWOP(""));
+  }, []);
+
+  const stockData = products.filter(p => 
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  ).map(p => ({
+    id: p._id,
+    name: p.name,
+    stock: p.stock || 0,
+    unit: p.unitid?.name || "N/A",
+    status: (p.stock || 0) === 0 ? "Out of Stock" : (p.stock || 0) < 20 ? "Low Stock" : "In Stock"
+  }));
 
   const columns = ["Product Name", "Available Stock", "Unit", "Status"];
 
@@ -59,15 +73,29 @@ export default function Stock() {
             type="text" 
             placeholder="Search stock..." 
             className="w-full pl-11 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="flex items-center gap-4 text-xs font-bold text-tmuted bg-background/50 px-4 py-2 rounded-lg border border-surfaceBorder/30 shadow-inner">
-          <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" /> Out of stock (1)</span>
-          <span className="flex items-center gap-2 ml-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" /> Low stock (1)</span>
+          <span className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" /> 
+            Out of stock ({stockData.filter(i => i.status === "Out of Stock").length})
+          </span>
+          <span className="flex items-center gap-2 ml-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" /> 
+            Low stock ({stockData.filter(i => i.status === "Low Stock").length})
+          </span>
         </div>
       </div>
 
-      <Table columns={columns} data={stockData} keyExtractor={(item) => item.id} renderRow={renderRow} />
+      <Table 
+        columns={columns} 
+        data={stockData} 
+        keyExtractor={(item) => item.id} 
+        renderRow={renderRow} 
+        isLoading={loading}
+      />
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Update Stock">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setIsModalOpen(false); }}>

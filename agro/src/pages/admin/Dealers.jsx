@@ -1,38 +1,33 @@
-import { useState } from "react";
-import { Search, Plus, ExternalLink, ShieldCheck, Mail, MapPin, FileText, CreditCard, Users, Phone } from "lucide-react";
-import Table from "../../components/ui/Table";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Plus, Trash2, ShieldCheck, MapPin, Search, ExternalLink, Mail, Phone, FileText, CreditCard, Loader2, Users } from "lucide-react";
 import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
 import FormInput from "../../components/ui/FormInput";
-import Card from "../../components/ui/Card";
+import Table from "../../components/ui/Table";
+import { fetchDistributors, getDistributor, createDistributor, deleteDistributor, changeDistributorStatus } from "../../redux/slices/distributorSlice";
+
+const mockCustomers = {};
 
 export default function Dealers() {
+  const dispatch = useDispatch();
+  const { distributors, loading: isFetching } = useSelector((state) => state.distributor);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const [dealers, setDealers] = useState([
-    { id: 1, name: "Ramesh Agriculture Traders", owner: "Ramesh Kumar", email: "ramesh.dealer@agro.in", phone: "+91 9876543210", location: "Palampur", activeCustomers: 142, gstNumber: "02AAAAA0000A1Z5", bankName: "HDFC Bank", accountNumber: "501004562134", ifscCode: "HDFC0001234" },
-    { id: 2, name: "Kisan Suvidha Kendra", owner: "Suresh Singh", email: "suresh.kisan@agro.in", phone: "+91 8765432109", location: "Anandpur", activeCustomers: 89, gstNumber: "02BBBBB0000B1Z5", bankName: "ICICI Bank", accountNumber: "000401002345", ifscCode: "ICIC0000004" },
-    { id: 3, name: "AgriTech Supplies", owner: "Mukesh Kumar", email: "mukesh.agri@agro.in", phone: "+91 7654321098", location: "Rampur", activeCustomers: 56, gstNumber: "02CCCCC0000C1Z5", bankName: "SBI", accountNumber: "31245678901", ifscCode: "SBIN0001234" },
-  ]);
+  const [editingDealer, setEditingDealer] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [currentDealer, setCurrentDealer] = useState(null);
 
-  const mockCustomers = {
-    1: [
-      { id: 101, name: "Green Valley Farms", location: "Solan", phone: "98123 45678", joined: "12 Mar 2024" },
-      { id: 102, name: "Shiv Shakti Traders", location: "Shimla", phone: "88990 01122", joined: "05 Feb 2024" },
-      { id: 103, name: "Agro Solutions Ltd", location: "Palampur", phone: "70180 99887", joined: "20 Jan 2024" },
-    ],
-    2: [
-      { id: 201, name: "Kisan Welfare Store", location: "Anandpur", phone: "94180 12345", joined: "22 Mar 2024" },
-      { id: 202, name: "Modern Agri Tools", location: "Bilaspur", phone: "98555 12121", joined: "10 Feb 2024" },
-    ],
-    3: [
-      { id: 301, name: "Rampur Seeds Center", location: "Rampur", phone: "99100 88776", joined: "01 Apr 2024" },
-    ]
-  };
+  const columns = ["Dealer Name", "GST", "Phone", "Location", "Bank", "IFSC", "A/C Number", "Customers", "Actions"];
+
+  const filteredDealers = distributors.filter(dealer => 
+    dealer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dealer.phone.includes(searchTerm)
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -47,35 +42,88 @@ export default function Dealers() {
     accountNumber: ""
   });
 
+  const fetchData = async () => {
+    dispatch(fetchDistributors({
+      page: 1,
+      limit: 50,
+      search: { name: searchTerm },
+      sortoption: -1
+    }));
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [searchTerm]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newDealer = {
-      ...formData,
-      id: Date.now(),
-      activeCustomers: 0
-    };
-    setDealers([newDealer, ...dealers]);
-    setIsModalOpen(false);
-    setFormData({
-      name: "",
-      gstNumber: "",
-      owner: "",
-      phone: "",
-      email: "",
-      password: "",
-      location: "",
-      bankName: "",
-      ifscCode: "",
-      accountNumber: ""
-    });
+  const handleOpenModal = async (dealer = null) => {
+    if (dealer) {
+      try {
+        const result = await dispatch(getDistributor(dealer._id)).unwrap();
+        const dealerData = result.Data;
+        setEditingDealer(dealerData);
+        setFormData({
+          name: dealerData.name || "",
+          gstNumber: dealerData.gstNumber || "",
+          owner: dealerData.owner || "",
+          phone: dealerData.phone || "",
+          email: dealerData.email || "",
+          password: "",
+          location: dealerData.location || "",
+          bankName: dealerData.bankName || "",
+          ifscCode: dealerData.ifscCode || "",
+          accountNumber: dealerData.accountNumber || ""
+        });
+      } catch (err) {
+        console.error("Failed to fetch dealer details:", err);
+      }
+    } else {
+      setEditingDealer(null);
+      setFormData({
+        name: "",
+        gstNumber: "",
+        owner: "",
+        phone: "",
+        email: "",
+        password: "",
+        location: "",
+        bankName: "",
+        ifscCode: "",
+        accountNumber: ""
+      });
+    }
+    setIsModalOpen(true);
   };
 
-  const columns = ["Dealer Name", "GST Number", "Phone", "Location", "Bank Name", "IFSC Code", "Account Number", "Customers", "Actions"];
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        distributorid: editingDealer ? editingDealer._id : "",
+        ...formData
+      };
+      const result = await dispatch(createDistributor(payload)).unwrap();
+      if (result.IsSuccess) {
+        setIsModalOpen(false);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to save dealer:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (dealer) => {
+    if (window.confirm("Are you sure you want to delete this dealer?")) {
+      dispatch(deleteDistributor(dealer._id)).then(() => fetchData());
+    }
+  };
 
   const renderRow = (item) => (
     <>
@@ -89,7 +137,7 @@ export default function Dealers() {
       </td>
       <td className="px-6 py-4 text-xs font-bold text-primary-500">
         <span className="bg-primary-500/10 px-2 py-1 rounded-md border border-primary-500/20">
-          {item.gstNumber}
+          {item.gstNumber || "N/A"}
         </span>
       </td>
       <td className="px-6 py-4 text-sm text-tmuted font-medium whitespace-nowrap">
@@ -101,34 +149,45 @@ export default function Dealers() {
         </span>
       </td>
       <td className="px-6 py-4 text-sm font-bold text-tmain whitespace-nowrap">
-        {item.bankName}
+        {item.bankName || "N/A"}
       </td>
       <td className="px-6 py-4 text-xs font-mono text-tmuted">
-        {item.ifscCode}
+        {item.ifscCode || "N/A"}
       </td>
       <td className="px-6 py-4 text-xs font-mono text-tmuted">
-        {item.accountNumber}
+        {item.accountNumber || "N/A"}
       </td>
       <td className="px-6 py-4 font-black text-emerald-500 text-lg">
-        {item.activeCustomers}
+        {item.activeCustomers || 0}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <button 
-          onClick={() => {
-            setCurrentDealer(item);
-            setIsCustomerModalOpen(true);
-          }}
-          className="text-xs text-primary-500 font-bold hover:text-primary-600 flex items-center gap-1 bg-primary-500/10 hover:bg-primary-500/20 px-3 py-1.5 rounded-lg border border-primary-500/20 transition-all shadow-sm dark:text-primary-400 dark:hover:text-white dark:hover:bg-primary-500 whitespace-nowrap"
-        >
-          <ExternalLink size={14} /> View Customers
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => handleOpenModal(item)}
+            className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
+            title="Edit"
+          >
+            <Plus size={16} className="rotate-45" /> {/* Using Plus as Edit icon placeholder or just import Edit2 */}
+          </button>
+          <button 
+            onClick={() => handleDeleteClick(item)}
+            className="p-1.5 text-tmuted hover:text-red-500 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
+            title="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+          <button 
+            onClick={() => {
+              setCurrentDealer(item);
+              setIsCustomerModalOpen(true);
+            }}
+            className="text-xs text-primary-500 font-bold hover:text-primary-600 flex items-center gap-1 bg-primary-500/10 hover:bg-primary-500/20 px-3 py-1.5 rounded-lg border border-primary-500/20 transition-all shadow-sm whitespace-nowrap"
+          >
+            <ExternalLink size={14} /> Customers
+          </button>
+        </div>
       </td>
     </>
-  );
-
-  const filteredDealers = dealers.filter(d => 
-    d.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -139,7 +198,7 @@ export default function Dealers() {
             <h1 className="text-2xl sm:text-3xl font-bold text-tmain tracking-tight">Dealer List</h1>
           </div>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="rounded-md px-6 py-2">
+        <Button onClick={() => handleOpenModal()} className="rounded-md px-6 py-2">
           <Plus size={18} />
           <span>Create Dealer</span>
         </Button>
@@ -163,15 +222,16 @@ export default function Dealers() {
         <Table 
           columns={columns} 
           data={filteredDealers} 
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item._id}
           renderRow={renderRow} 
+          isLoading={isFetching}
         />
       </div>
 
       {/* Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 lg:hidden mt-4">
         {filteredDealers.map((item) => (
-          <Card key={item.id} className="relative overflow-hidden border-surfaceBorder/60 hover:border-rose-500/30 transition-all p-5 space-y-4">
+          <Card key={item._id} className="relative overflow-hidden border-surfaceBorder/60 hover:border-rose-500/30 transition-all p-5 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-primary-500/10 text-primary-500 border border-primary-500/20 flex items-center justify-center font-bold shadow-sm shrink-0">
@@ -182,9 +242,19 @@ export default function Dealers() {
                   <p className="text-xs text-tmuted font-medium mt-0.5 italic">Owner: {item.owner}</p>
                 </div>
               </div>
-              <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 shrink-0">
-                {item.activeCustomers} CUST
-              </span>
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 shrink-0">
+                  {item.activeCustomers || 0} CUST
+                </span>
+                <div className="flex gap-2">
+                  <button onClick={() => handleOpenModal(item)} className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 rounded-lg border border-surfaceBorder shadow-sm">
+                    <Plus size={14} className="rotate-45" />
+                  </button>
+                  <button onClick={() => handleDeleteClick(item)} className="p-1.5 text-tmuted hover:text-red-500 bg-surface/50 rounded-lg border border-surfaceBorder shadow-sm">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-y border-surfaceBorder/40">
@@ -202,15 +272,15 @@ export default function Dealers() {
               </div>
               <div className="flex items-center gap-2 text-[13px] font-bold text-primary-500">
                 <FileText size={14} className="opacity-70" />
-                <span className="tracking-tight">{item.gstNumber}</span>
+                <span className="tracking-tight">{item.gstNumber || "N/A"}</span>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-1">
                <div className="flex items-center gap-2 text-[11px] font-bold text-tmuted/70 uppercase tracking-wider">
-                  <CreditCard size={12} /> {item.bankName}
+                  <CreditCard size={12} /> {item.bankName || "N/A"}
                </div>
-               <div className="text-[11px] text-tmuted/50 font-medium">A/C: {item.accountNumber}</div>
+               <div className="text-[11px] text-tmuted/50 font-medium">A/C: {item.accountNumber || "N/A"}</div>
             </div>
 
             <Button 
@@ -224,7 +294,7 @@ export default function Dealers() {
             </Button>
           </Card>
         ))}
-        {filteredDealers.length === 0 && (
+        {(filteredDealers.length === 0 && !isFetching) && (
           <div className="glass p-12 text-center rounded-3xl border-dashed border-2 border-surfaceBorder">
             <div className="w-16 h-16 rounded-full bg-tmuted/10 flex items-center justify-center mx-auto text-tmuted/30 mb-4">
               <Search size={32} />
@@ -350,8 +420,8 @@ export default function Dealers() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
-            {(mockCustomers[currentDealer?.id] || []).length > 0 ? (
-              mockCustomers[currentDealer?.id].map((cust) => (
+            {(mockCustomers[currentDealer?._id] || []).length > 0 ? (
+              mockCustomers[currentDealer?._id].map((cust) => (
                 <div key={cust.id} className="p-4 glass rounded-2xl flex items-center justify-between group hover:border-primary-500/30 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-surfaceBorder flex items-center justify-center text-primary-500 group-hover:bg-primary-500 group-hover:text-white transition-all">

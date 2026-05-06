@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, Trash2, Printer, Receipt } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
 import Card from "../components/ui/Card";
@@ -7,19 +7,35 @@ import FormInput from "../components/ui/FormInput";
 import Modal from "../components/ui/Modal";
 import { cn } from "../lib/utils";
 
+import { useDispatch, useSelector } from "react-redux";
+import { fetchCustomersWOP } from "../redux/slices/customerSlice";
+import { fetchProductsWOP } from "../redux/slices/productSlice";
+
 export default function Billing() {
-  const [items, setItems] = useState([{ id: 1, product: "", qty: 1, price: 0, total: 0 }]);
+  const dispatch = useDispatch();
+  const { customersWOP } = useSelector((state) => state.customer);
+  const { productsWOP } = useSelector((state) => state.product);
+  
+  const [items, setItems] = useState([{ id: Date.now(), product: "", qty: 1, price: 0, total: 0 }]);
   const [applyGst, setApplyGst] = useState(false);
   const [discount, setDiscount] = useState(0);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const componentRef = useRef();
+
+  useEffect(() => {
+    dispatch(fetchCustomersWOP(""));
+    dispatch(fetchProductsWOP(""));
+  }, []);
+
+  const selectedCustomer = customersWOP.find(c => c._id === selectedCustomerId);
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
   });
 
   const addItem = () => {
-    setItems([...items, { id: items.length + 1, product: "", qty: 1, price: 0, total: 0 }]);
+    setItems([...items, { id: Date.now(), product: "", qty: 1, price: 0, total: 0 }]);
   };
 
   const removeItem = (id) => {
@@ -33,7 +49,9 @@ export default function Billing() {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
         if (field === 'product') {
-          updated.price = value === "Urea" ? 266 : value === "DAP" ? 1350 : 0;
+          const prod = productsWOP.find(p => p._id === value);
+          updated.price = prod ? prod.price : 0;
+          updated.productName = prod ? prod.name : "";
         }
         updated.total = updated.qty * updated.price;
         return updated;
@@ -65,10 +83,15 @@ export default function Billing() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2 md:col-span-2">
                 <label className="block text-sm font-semibold text-tmuted">Select Customer</label>
-                <select className="w-full px-4 py-3 glass-input text-sm font-medium">
+                <select 
+                  className="w-full px-4 py-3 glass-input text-sm font-medium"
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                >
                   <option value="">-- Select or Search Customer --</option>
-                  <option value="1">Ramesh Farmer (+91 9876543210)</option>
-                  <option value="2">Suresh Singh (+91 8765432109)</option>
+                  {customersWOP.map(c => (
+                    <option key={c._id} value={c._id}>{c.name} ({c.mobile})</option>
+                  ))}
                 </select>
               </div>
               <FormInput label="Billing Date" type="date" defaultValue={new Date().toISOString().split('T')[0]} />
@@ -106,8 +129,9 @@ export default function Billing() {
                       onChange={(e) => updateItem(item.id, 'product', e.target.value)}
                     >
                       <option value="">Select...</option>
-                      <option value="Urea">Urea Fertilizer</option>
-                      <option value="DAP">DAP</option>
+                      {productsWOP.map(p => (
+                        <option key={p._id} value={p._id}>{p.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="grid grid-cols-3 md:grid-cols-6 col-span-1 md:col-span-6 gap-4 w-full">
@@ -256,9 +280,9 @@ export default function Billing() {
 
           <div className="mb-10">
             <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-3">Bill To</p>
-            <h3 className="text-xl font-bold text-slate-900">Ramesh Farmer</h3>
-            <p className="text-sm text-slate-500 font-medium mt-1">Palampur Village</p>
-            <p className="text-sm text-slate-500 font-medium">+91 9876543210</p>
+            <h3 className="text-xl font-bold text-slate-900">{selectedCustomer?.name || "Cash Customer"}</h3>
+            <p className="text-sm text-slate-500 font-medium mt-1">{selectedCustomer?.village || selectedCustomer?.address || "N/A"}</p>
+            <p className="text-sm text-slate-500 font-medium">{selectedCustomer?.mobile || ""}</p>
           </div>
 
           <table className="w-full text-left mb-10">
@@ -273,7 +297,7 @@ export default function Billing() {
             <tbody className="divide-y divide-slate-100">
               {items.map(item => item.product ? (
                 <tr key={item.id}>
-                  <td className="py-4 px-4 text-sm text-slate-800 font-bold">{item.product}</td>
+                  <td className="py-4 px-4 text-sm text-slate-800 font-bold">{item.productName}</td>
                   <td className="py-4 px-4 text-sm text-slate-600 font-medium text-center bg-slate-50">{item.qty}</td>
                   <td className="py-4 px-4 text-sm text-slate-600 font-medium text-right">₹{item.price.toFixed(2)}</td>
                   <td className="py-4 px-4 text-sm text-slate-900 font-bold text-right bg-slate-50">₹{item.total.toFixed(2)}</td>

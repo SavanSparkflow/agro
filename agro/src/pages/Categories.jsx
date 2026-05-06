@@ -10,56 +10,53 @@ import { useState } from "react";
 
 import Table from "../components/ui/Table";
 
+import { useDispatch, useSelector } from "react-redux";
+import { fetchCategories, getCategory, createCategory, deleteCategory } from "../redux/slices/categorySlice";
+
 export default function Categories() {
+  const dispatch = useDispatch();
+  const { categories, loading } = useSelector((state) => state.category);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Form State
   const [formName, setFormName] = useState("");
 
-  const categories = [
-    { id: 1, name: "Fertilizers", count: 45, icon: Droplet },
-    { id: 2, name: "Seeds", count: 120, icon: Tag },
-    { id: 3, name: "Pesticides", count: 32, icon: Box },
-    { id: 4, name: "Tools", count: 15, icon: Archive },
-  ];
-
-  const mockProducts = {
-    1: [
-      { id: 101, name: "Urea Premium 50kg", price: "₹299", stock: "450 Bags" },
-      { id: 102, name: "NPK 19:19:19", price: "₹450", stock: "125 Units" },
-      { id: 103, name: "Potash Supreme", price: "₹580", stock: "80 Bags" },
-    ],
-    2: [
-      { id: 201, name: "Golden Hybrid Wheat", price: "₹1,200", stock: "2,500 kg" },
-      { id: 202, name: "Basmati Paddy Seeds", price: "₹2,500", stock: "1,200 kg" },
-    ],
-    3: [
-      { id: 301, name: "Bio-Shield 500ml", price: "₹850", stock: "45 Bottles" },
-    ],
-    4: [
-      { id: 401, name: "Steel Garden Spade", price: "₹450", stock: "12 Units" },
-      { id: 402, name: "Electric Sprayer", price: "₹3,200", stock: "5 Units" },
-    ]
+  const fetchData = async () => {
+    dispatch(fetchCategories({
+      page: 1,
+      limit: 100,
+      search: searchTerm ? { name: searchTerm } : {},
+      sortoption: -1
+    }));
   };
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    fetchData();
+  }, [searchTerm]);
 
   const handleOpenAddModal = () => {
-    setIsEditMode(false);
+    setEditingCategory(null);
     setFormName("");
     setIsModalOpen(true);
   };
 
-  const handleEditClick = (cat) => {
-    setIsEditMode(true);
-    setFormName(cat.name);
-    setIsModalOpen(true);
+  const handleEditClick = async (cat) => {
+    try {
+      const result = await dispatch(getCategory(cat._id)).unwrap();
+      const catData = result.Data;
+      setEditingCategory(catData);
+      setFormName(catData.name || "");
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error("Failed to fetch category details:", err);
+    }
   };
 
   const handleViewProducts = (cat) => {
@@ -72,16 +69,34 @@ export default function Categories() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    console.log("Deleting category:", categoryToDelete);
-    setIsDeleteModalOpen(false);
-    setCategoryToDelete(null);
+  const handleConfirmDelete = async () => {
+    try {
+      await dispatch(deleteCategory(categoryToDelete._id)).unwrap();
+      setIsDeleteModalOpen(false);
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete category:", err);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(isEditMode ? "Updating category" : "Creating category", { formName });
-    setIsModalOpen(false);
+    setIsSaving(true);
+    try {
+      const payload = {
+        categoryid: editingCategory ? editingCategory._id : "",
+        name: formName
+      };
+      const result = await dispatch(createCategory(payload)).unwrap();
+      if (result.IsSuccess) {
+        setIsModalOpen(false);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to save category:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -112,28 +127,16 @@ export default function Categories() {
 
       <div className="hidden lg:block">
         <Table 
-          columns={["Category Name", "Total Products", "Actions"]} 
-          data={categories.filter(cat => cat.name.toLowerCase().includes(searchTerm.toLowerCase()))} 
-          keyExtractor={(item) => item.id}
+          columns={["Category Name", "Actions"]} 
+          data={categories} 
+          keyExtractor={(item) => item._id}
           renderRow={(item) => (
             <>
               <td className="px-6 py-4">
                 <span className="font-bold text-tmain text-sm">{item.name}</span>
               </td>
               <td className="px-6 py-4">
-                <span className="text-[11px] font-black text-tmuted uppercase tracking-widest bg-background px-2 py-1 rounded border border-surfaceBorder">
-                  {item.count} Products
-                </span>
-              </td>
-              <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleViewProducts(item); }}
-                    className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
-                    title="View Catalog"
-                  >
-                    <Eye size={14} />
-                  </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
                     className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
@@ -152,29 +155,29 @@ export default function Categories() {
               </td>
             </>
           )} 
+          isLoading={loading}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:hidden mt-4">
-        {categories.filter(cat => cat.name.toLowerCase().includes(searchTerm.toLowerCase())).map((item) => (
-          <Card key={item.id} className="p-4 border-surfaceBorder hover:border-primary-500/30 transition-all flex items-center justify-between">
+        {categories.map((item) => (
+          <Card key={item._id} className="p-4 border-surfaceBorder hover:border-primary-500/30 transition-all flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-surfaceBorder bg-surface">
-                <item.icon size={24} className="text-tmuted" />
+                <Layers size={24} className="text-tmuted" />
               </div>
               <div>
                 <h3 className="font-bold text-tmain">{item.name}</h3>
-                <p className="text-[10px] font-bold text-tmuted uppercase">{item.count} Products</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => handleViewProducts(item)} className="p-2 text-primary-500"><ArrowRight size={18} /></button>
+               <button onClick={() => handleEditClick(item)} className="p-2 text-tmuted hover:text-form-primary"><Edit2 size={18} /></button>
             </div>
           </Card>
         ))}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={isEditMode ? "Edit Product Category" : "Create Product Category"}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingCategory ? "Edit Product Category" : "Create Product Category"}>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <FormInput 
             label="Category Name" 
@@ -186,47 +189,11 @@ export default function Categories() {
 
           <div className="pt-6 flex items-center justify-end gap-3 mt-8 border-t border-surfaceBorder/50">
             <Button type="button" variant="ghost" className="rounded-md" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" className="rounded-md px-8">
-              {isEditMode ? "Update Details" : "Deploy Category"}
+            <Button type="submit" disabled={isSaving} className="rounded-md px-8">
+              {isSaving ? "Saving..." : editingCategory ? "Update Details" : "Deploy Category"}
             </Button>
           </div>
         </form>
-      </Modal>
-
-      <Modal
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        title={selectedCategory ? `${selectedCategory.name} Catalog` : "Product List"}
-        className="max-w-2xl"
-      >
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-3">
-            {(mockProducts[selectedCategory?.id] || []).map((product) => (
-              <div key={product.id} className="p-3 bg-surface border border-transparent hover:border-surfaceBorder rounded-xl flex items-center justify-between group transition-all shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-background/50 flex items-center justify-center text-tmuted group-hover:text-form-primary transition-all border border-surfaceBorder shadow-inner">
-                    <Boxes size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-tmain leading-tight tracking-tight">{product.name}</h4>
-                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-tmuted font-medium italic opacity-70">
-                      <span className="flex items-center gap-1"><Layers size={11} /> Stock: {product.stock}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{product.price}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          {(!mockProducts[selectedCategory?.id] || mockProducts[selectedCategory?.id].length === 0) && (
-            <div className="text-center py-8">
-              <Boxes size={32} className="mx-auto text-tmuted/20 mb-2" />
-              <p className="text-xs text-tmuted font-medium italic">No products currently listed in this category.</p>
-            </div>
-          )}
-        </div>
       </Modal>
 
       <DeleteModal 

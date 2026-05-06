@@ -1,6 +1,6 @@
 import { cn } from "../../lib/utils";
 
-export default function Table({ columns, data, keyExtractor, renderRow }) {
+export default function Table({ columns, data, keyExtractor, renderRow, isLoading }) {
   return (
     <div className="w-full max-w-full overflow-x-auto rounded-3xl glass border border-surfaceBorder shadow-sm relative mt-6 min-w-0">
       <table className="w-full text-left border-collapse relative z-10">
@@ -17,7 +17,16 @@ export default function Table({ columns, data, keyExtractor, renderRow }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-surfaceBorder">
-          {data.length > 0 ? (
+          {isLoading ? (
+            <tr>
+              <td colSpan={columns.length} className="px-6 py-12 text-center text-tmuted">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin"></div>
+                  <span className="text-sm font-medium">Fetching records...</span>
+                </div>
+              </td>
+            </tr>
+          ) : data.length > 0 ? (
             data.map((item, i) => (
               <tr 
                 key={keyExtractor ? keyExtractor(item) : i} 

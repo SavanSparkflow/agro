@@ -6,59 +6,52 @@ import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
 import DeleteModal from "../../components/ui/DeleteModal";
-import { 
-  useGetUnitsMutation, 
-  useCreateOrUpdateUnitMutation, 
-  useDeleteUnitMutation, 
-  useChangeUnitStatusMutation 
-} from "../../redux/api/unitApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchUnits, getUnit, createUnit, deleteUnit, changeUnitStatus } from "../../redux/slices/unitSlice";
 
 export default function Units() {
-  const [units, setUnits] = useState([]);
+  const dispatch = useDispatch();
+  const { units, loading: isFetching } = useSelector((state) => state.unit);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUnit, setEditingUnit] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [unitToDelete, setUnitToDelete] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
     sequence: ""
   });
 
-  const [getUnits, { isLoading: isFetching }] = useGetUnitsMutation();
-  const [createOrUpdateUnit, { isLoading: isSaving }] = useCreateOrUpdateUnitMutation();
-  const [deleteUnit] = useDeleteUnitMutation();
-  const [changeStatus] = useChangeUnitStatusMutation();
-
-  const fetchUnits = async () => {
-    try {
-      const result = await getUnits({
-        page: 1,
-        limit: 100,
-        search: { name: searchQuery },
-        sortfield: "_id",
-        sortoption: 1
-      }).unwrap();
-      if (result.IsSuccess) {
-        setUnits(result.Data.docs || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch units:", err);
-    }
+  const fetchData = async () => {
+    dispatch(fetchUnits({
+      page: 1,
+      limit: 100,
+      search: { name: searchQuery },
+      sortfield: "_id",
+      sortoption: 1
+    }));
   };
 
   useEffect(() => {
-    fetchUnits();
+    fetchData();
   }, [searchQuery]);
 
-  const handleOpenModal = (unit = null) => {
+  const handleOpenModal = async (unit = null) => {
     if (unit) {
-      setEditingUnit(unit);
-      setFormData({
-        name: unit.name,
-        sequence: unit.sequence || ""
-      });
+      try {
+        const result = await dispatch(getUnit(unit._id)).unwrap();
+        const unitData = result.Data;
+        setEditingUnit(unitData);
+        setFormData({
+          name: unitData.name,
+          sequence: unitData.sequence || ""
+        });
+      } catch (err) {
+        console.error("Failed to fetch unit details:", err);
+      }
     } else {
       setEditingUnit(null);
       setFormData({
@@ -71,18 +64,21 @@ export default function Units() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       const payload = {
         unitid: editingUnit ? editingUnit._id : "",
         ...formData
       };
-      const result = await createOrUpdateUnit(payload).unwrap();
+      const result = await dispatch(createUnit(payload)).unwrap();
       if (result.IsSuccess) {
         setIsModalOpen(false);
-        fetchUnits();
+        fetchData();
       }
     } catch (err) {
       console.error("Failed to save unit:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -93,9 +89,9 @@ export default function Units() {
 
   const handleConfirmDelete = async () => {
     try {
-      await deleteUnit({ unitid: unitToDelete._id }).unwrap();
+      await dispatch(deleteUnit(unitToDelete._id)).unwrap();
       setIsDeleteModalOpen(false);
-      fetchUnits();
+      fetchData();
     } catch (err) {
       console.error("Failed to delete unit:", err);
     }
@@ -103,8 +99,8 @@ export default function Units() {
 
   const handleToggleStatus = async (id) => {
     try {
-      await changeStatus({ unitid: id }).unwrap();
-      fetchUnits();
+      await dispatch(changeUnitStatus(id)).unwrap();
+      fetchData();
     } catch (err) {
       console.error("Failed to change status:", err);
     }

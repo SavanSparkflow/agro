@@ -6,26 +6,24 @@ import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
 import DeleteModal from "../../components/ui/DeleteModal";
-import { 
-  useGetProductsMutation, 
-  useCreateOrUpdateProductMutation, 
-  useDeleteProductMutation, 
-  useChangeProductStatusMutation,
-  useUploadProductImageMutation
-} from "../../redux/api/productApi";
-import { useGetCategoriesMutation } from "../../redux/api/categoryApi";
-import { useGetUnitsMutation } from "../../redux/api/unitApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts, getProduct, createProduct, deleteProduct, changeProductStatus, uploadProductImage } from "../../redux/slices/productSlice";
+import { fetchCategoriesWOP } from "../../redux/slices/categorySlice";
+import { fetchUnitsWOP } from "../../redux/slices/unitSlice";
 
 export default function Products() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [units, setUnits] = useState([]);
+  const dispatch = useDispatch();
+  const { products, loading: isFetching } = useSelector((state) => state.product);
+  const { categoriesWOP: categories } = useSelector((state) => state.category);
+  const { unitsWOP: units } = useSelector((state) => state.unit);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -37,50 +35,38 @@ export default function Products() {
     description: ""
   });
 
-  const [getProducts, { isLoading: isFetching }] = useGetProductsMutation();
-  const [createOrUpdateProduct, { isLoading: isSaving }] = useCreateOrUpdateProductMutation();
-  const [deleteProduct] = useDeleteProductMutation();
-  const [changeStatus] = useChangeProductStatusMutation();
-  const [uploadImage] = useUploadProductImageMutation();
-  
-  const [getCategories] = useGetCategoriesMutation();
-  const [getUnits] = useGetUnitsMutation();
-
   const fetchData = async () => {
-    try {
-      const productResult = await getProducts({
-        page: 1,
-        limit: 50,
-        search: { name: searchQuery },
-        sortoption: -1
-      }).unwrap();
-      if (productResult.IsSuccess) setProducts(productResult.Data.docs || []);
-
-      const catResult = await getCategories({ page: 1, limit: 100 }).unwrap();
-      if (catResult.IsSuccess) setCategories(catResult.Data.docs || []);
-
-      const unitResult = await getUnits({ page: 1, limit: 100 }).unwrap();
-      if (unitResult.IsSuccess) setUnits(unitResult.Data.docs || []);
-    } catch (err) {
-      console.error("Failed to fetch data:", err);
-    }
+    dispatch(fetchProducts({
+      page: 1,
+      limit: 50,
+      search: { name: searchQuery },
+      sortoption: -1
+    }));
+    dispatch(fetchCategoriesWOP(""));
+    dispatch(fetchUnitsWOP(""));
   };
 
   useEffect(() => {
     fetchData();
   }, [searchQuery]);
 
-  const handleOpenModal = (product = null) => {
+  const handleOpenModal = async (product = null) => {
     if (product) {
-      setEditingProduct(product);
-      setFormData({
-        categoryid: product.categoryid?._id || "",
-        name: product.name,
-        unit: product.unit?._id || "",
-        price: product.price,
-        image: product.image,
-        description: product.description || ""
-      });
+      try {
+        const result = await dispatch(getProduct(product._id)).unwrap();
+        const productData = result.Data;
+        setEditingProduct(productData);
+        setFormData({
+          categoryid: productData.categoryid?._id || productData.categoryid || "",
+          name: productData.name,
+          unit: productData.unit?._id || productData.unit || "",
+          price: productData.price,
+          image: productData.image,
+          description: productData.description || ""
+        });
+      } catch (err) {
+        console.error("Failed to fetch product details:", err);
+      }
     } else {
       setEditingProduct(null);
       setFormData({
@@ -104,7 +90,7 @@ export default function Products() {
     setIsUploading(true);
 
     try {
-      const result = await uploadImage(uploadData).unwrap();
+      const result = await dispatch(uploadProductImage(uploadData)).unwrap();
       if (result.IsSuccess) {
         setFormData(prev => ({ ...prev, image: result.Data }));
       }
@@ -117,18 +103,21 @@ export default function Products() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       const payload = {
         productid: editingProduct ? editingProduct._id : "",
         ...formData
       };
-      const result = await createOrUpdateProduct(payload).unwrap();
+      const result = await dispatch(createProduct(payload)).unwrap();
       if (result.IsSuccess) {
         setIsModalOpen(false);
         fetchData();
       }
     } catch (err) {
       console.error("Failed to save product:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -139,7 +128,7 @@ export default function Products() {
 
   const handleConfirmDelete = async () => {
     try {
-      await deleteProduct({ productid: productToDelete._id }).unwrap();
+      await dispatch(deleteProduct(productToDelete._id)).unwrap();
       setIsDeleteModalOpen(false);
       fetchData();
     } catch (err) {
@@ -149,7 +138,7 @@ export default function Products() {
 
   const handleToggleStatus = async (id) => {
     try {
-      await changeStatus({ productid: id }).unwrap();
+      await dispatch(changeProductStatus(id)).unwrap();
       fetchData();
     } catch (err) {
       console.error("Failed to change status:", err);

@@ -5,57 +5,50 @@ import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
 import FormInput from "../../components/ui/FormInput";
 import DeleteModal from "../../components/ui/DeleteModal";
-import { 
-  useGetRolesMutation, 
-  useCreateOrUpdateRoleMutation, 
-  useDeleteRoleMutation, 
-  useChangeRoleStatusMutation 
-} from "../../redux/api/roleApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchRoles, getRole, createRole, deleteRole, changeRoleStatus } from "../../redux/slices/roleSlice";
 
 export default function RoleManagement() {
-  const [roles, setRoles] = useState([]);
+  const dispatch = useDispatch();
+  const { roles, loading: isFetching } = useSelector((state) => state.role);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingRole, setEditingRole] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     rolename: ""
   });
 
-  const [getRoles, { isLoading: isFetching }] = useGetRolesMutation();
-  const [createOrUpdateRole, { isLoading: isSaving }] = useCreateOrUpdateRoleMutation();
-  const [deleteRole] = useDeleteRoleMutation();
-  const [changeStatus] = useChangeRoleStatusMutation();
-
   const fetchData = async () => {
-    try {
-      const result = await getRoles({
-        page: 1,
-        limit: 50,
-        search: { rolename: searchQuery },
-        sortfield: "_id",
-        sortoption: 1
-      }).unwrap();
-      if (result.IsSuccess) {
-        setRoles(result.Data.docs || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch roles:", err);
-    }
+    dispatch(fetchRoles({
+      page: 1,
+      limit: 50,
+      search: { rolename: searchQuery },
+      sortfield: "_id",
+      sortoption: 1
+    }));
   };
 
   useEffect(() => {
     fetchData();
   }, [searchQuery]);
 
-  const handleOpenModal = (role = null) => {
+  const handleOpenModal = async (role = null) => {
     if (role) {
-      setEditingRole(role);
-      setFormData({
-        rolename: role.rolename
-      });
+      try {
+        const result = await dispatch(getRole(role._id)).unwrap();
+        const roleData = result.Data;
+        setEditingRole(roleData);
+        setFormData({
+          rolename: roleData.rolename
+        });
+      } catch (err) {
+        console.error("Failed to fetch role details:", err);
+      }
     } else {
       setEditingRole(null);
       setFormData({
@@ -67,18 +60,21 @@ export default function RoleManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       const payload = {
         roleid: editingRole ? editingRole._id : "",
         ...formData
       };
-      const result = await createOrUpdateRole(payload).unwrap();
+      const result = await dispatch(createRole(payload)).unwrap();
       if (result.IsSuccess) {
         setIsModalOpen(false);
         fetchData();
       }
     } catch (err) {
       console.error("Failed to save role:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -89,7 +85,7 @@ export default function RoleManagement() {
 
   const handleConfirmDelete = async () => {
     try {
-      await deleteRole({ roleid: roleToDelete._id }).unwrap();
+      await dispatch(deleteRole(roleToDelete._id)).unwrap();
       setIsDeleteModalOpen(false);
       fetchData();
     } catch (err) {
@@ -99,7 +95,7 @@ export default function RoleManagement() {
 
   const handleToggleStatus = async (id) => {
     try {
-      await changeStatus({ roleid: id }).unwrap();
+      await dispatch(changeRoleStatus(id)).unwrap();
       fetchData();
     } catch (err) {
       console.error("Failed to change status:", err);

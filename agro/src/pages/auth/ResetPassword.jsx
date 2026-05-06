@@ -4,18 +4,20 @@ import Button from "../../components/ui/Button";
 import ThemeToggle from "../../components/ui/ThemeToggle";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useResetPasswordMutation } from "../../redux/api/authApi";
+import { useDispatch } from "react-redux";
+import { resetPassword } from "../../redux/slices/authSlice";
 
 export default function ResetPassword() {
+  const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,12 +40,15 @@ export default function ResetPassword() {
       return;
     }
 
+    setIsLoading(true);
     try {
-      await resetPassword({ content, iv, password }).unwrap();
+      await dispatch(resetPassword({ content, iv, password })).unwrap();
       setMessage("Password reset successfully. Redirecting to login...");
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
-      setError(err?.data?.message || "Failed to reset password.");
+      setError(err?.message || "Failed to reset password.");
+    } finally {
+      setIsLoading(false);
     }
   };
 

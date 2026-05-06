@@ -6,8 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useDispatch, useSelector } from "react-redux";
-import { logout, updateUser } from "../../redux/slices/authSlice";
-import { useLogoutMutation, useGetProfileQuery } from "../../redux/api/authApi";
+import { logout, getProfile, updateUser } from "../../redux/slices/authSlice";
 
 // const DEALER_LINKS = [
 //   { name: "Dashboard", href: "/dealer", icon: LayoutDashboard },
@@ -22,13 +21,14 @@ import { useLogoutMutation, useGetProfileQuery } from "../../redux/api/authApi";
 const ADMIN_LINKS = [
   { name: "Dealers List", href: "/admin/dealers", icon: Shield },
   { name: "User List", href: "/admin/users", icon: Users },
+  { name: "Customers", href: "/admin/customers", icon: UserCircle },
   { name: "Role Management", href: "/admin/roles", icon: Shield },
   { name: "Products", href: "/admin/products", icon: ShoppingBag },
   { name: "Categories", href: "/admin/categories", icon: Tags },
   { name: "Units", href: "/admin/units", icon: Scale },
   { name: "Stock", href: "/admin/stock", icon: Archive },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
-  { name: "Billing", href: "/admin/billing", icon: ReceiptIndianRupee },
+  // { name: "Billing", href: "/admin/billing", icon: ReceiptIndianRupee },
   { name: "Sales History", href: "/admin/history", icon: Clock },
 ];
 
@@ -37,29 +37,16 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const [logoutApi] = useLogoutMutation();
-  
-  // Fetch profile if authenticated to get user details
-  const { data: profileData } = useGetProfileQuery(undefined, {
-    skip: !isAuthenticated,
-  });
+  const handleLogout = async () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   useEffect(() => {
-    if (profileData?.Data?.userData) {
-      dispatch(updateUser(profileData.Data.userData));
+    if (isAuthenticated) {
+      dispatch(getProfile());
     }
-  }, [profileData, dispatch]);
-
-  const handleLogout = async () => {
-    try {
-      await logoutApi().unwrap();
-    } catch (err) {
-      console.error("Logout failed:", err);
-    } finally {
-      dispatch(logout());
-      navigate("/login");
-    }
-  };
+  }, [isAuthenticated, dispatch]);
 
   return (
     <>

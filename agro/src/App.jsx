@@ -65,6 +65,7 @@ export default function App() {
           {/* Admin Flow */}
           <Route path="admin/dealers" element={<Dealers />} />
           <Route path="admin/users" element={<Users />} />
+          <Route path="admin/customers" element={<Customers />} />
           <Route path="admin/roles" element={<RoleManagement />} />
           <Route path="admin/feedback" element={<FeedbackList />} />
           <Route path="admin/products" element={<AdminProducts />} />
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="admin/stock" element={<Stock />} />
           <Route path="admin/billing" element={<Billing />} />
           <Route path="admin/orders" element={<Orders />} />
+          <Route path="admin/history" element={<SalesHistory />} />
           <Route path="customers" element={<Customers />} />
           <Route path="reports" element={<div className="p-4 text-theme-muted">Reports Page (Coming Soon)</div>} />
 

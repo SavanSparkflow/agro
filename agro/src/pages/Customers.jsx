@@ -1,55 +1,58 @@
-import { useState } from "react";
-import { Plus, Search, Edit2, Trash2, MessageSquare, Send, User, CornerUpRight, Calendar, ArrowRight as ArrowRightIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Search, MessageSquare, Send, CornerUpRight, Calendar, ArrowRight as ArrowRightIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Table from "../components/ui/Table";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
-import FormInput from "../components/ui/FormInput";
-import DeleteModal from "../components/ui/DeleteModal";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchCustomers } from "../redux/slices/customerSlice";
 import { cn } from "../lib/utils";
 
 export default function Customers() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const dispatch = useDispatch();
+  const { customers, totalRecords, loading } = useSelector((state) => state.customer);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState(null);
+
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [reply, setReply] = useState("");
 
-  const customers = [
-    { id: 1, name: "Ramesh Farmer", mobile: "+91 9876543210", village: "Palampur" },
-    { id: 2, name: "Suresh Singh", mobile: "+91 8765432109", village: "Anandpur" },
-    { id: 3, name: "Mukesh Kumar", mobile: "+91 7654321098", village: "Rampur" },
-  ];
+  const columns = ["Customer Name", "Mobile", "Village / Address"];
 
-  const dealers = [
-    { id: 1, name: "Premium Agro Dealer" },
-    { id: 2, name: "Global Seeds & Chemicals" },
-    { id: 3, name: "Modern Farming Solutions" },
-  ];
-
-  const columns = ["Name", "Mobile", "Village", "Actions"];
-
-  const handleDeleteClick = (customer) => {
-    setCustomerToDelete(customer);
-    setIsDeleteModalOpen(true);
+  const fetchData = async () => {
+    const payload = {
+      page: currentPage,
+      limit: limit,
+      search: searchTerm ? { name: searchTerm } : {},
+      distributorid: [],
+      name: [],
+      email: [],
+      countrycode: [],
+      mobile: [],
+      sortoption: -1,
+      fromDate: fromDate,
+      toDate: toDate
+    };
+    dispatch(fetchCustomers(payload));
   };
 
-  const handleConfirmDelete = () => {
-    console.log("Deleting customer:", customerToDelete);
-    setIsDeleteModalOpen(false);
-    setCustomerToDelete(null);
-  };
+  useEffect(() => {
+    fetchData();
+  }, [currentPage, limit, searchTerm, fromDate, toDate]);
+
+  const totalPages = Math.ceil(totalRecords / limit);
 
   const renderRow = (item) => (
     <>
       <td className="px-6 py-4">
         <div className="flex items-center gap-4 group">
           <div className="w-10 h-10 rounded-full bg-primary-500/10 text-primary-400 border border-primary-500/20 flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-110 transition-transform">
-            {item.name.charAt(0)}
+            {item.name?.charAt(0) || "C"}
           </div>
           <button 
             onClick={() => {
@@ -65,22 +68,8 @@ export default function Customers() {
       <td className="px-6 py-4 text-tmuted font-medium text-sm">{item.mobile}</td>
       <td className="px-6 py-4">
         <span className="inline-flex items-center px-3 py-1 rounded text-[11px] font-bold bg-surface text-tmuted border border-surfaceBorder whitespace-nowrap">
-          {item.village}
+          {item.village || item.address || "N/A"}
         </span>
-      </td>
-      <td className="px-6 py-4">
-        <div className="flex items-center gap-2">
-          {/* <button className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all" title="Edit">
-            <Edit2 size={16} />
-          </button> */}
-          <button 
-            onClick={() => handleDeleteClick(item)}
-            className="p-1.5 text-tmuted hover:text-red-500 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all" 
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
       </td>
     </>
   );
@@ -90,11 +79,8 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-tmain tracking-tight">Customers</h1>
+          <p className="text-sm text-tmuted mt-1">View all registered customers and their feedback.</p>
         </div>
-        {/* <Button onClick={() => setIsModalOpen(true)} className="rounded-md px-6 py-2">
-          <Plus size={18} />
-          <span>Add Customer</span>
-        </Button> */}
       </div>
 
       <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col lg:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
@@ -105,21 +91,25 @@ export default function Customers() {
             placeholder="Search customers..." 
             className="w-full pl-11 pr-4 py-2.5 bg-background border border-surfaceBorder rounded-xl text-sm focus:border-form-primary focus:ring-1 focus:ring-form-primary outline-none text-tmain placeholder:text-tmuted transition-all shadow-inner"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-background border border-surfaceBorder p-1.5 rounded-xl shadow-inner w-full lg:w-auto">
-            {/* From Date */}
             <div className="relative flex-1 min-w-[140px] lg:w-40">
               <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
               <input 
                 type="date" 
                 value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-9 pr-3 py-1.5 bg-transparent border-none text-xs font-bold text-tmain focus:ring-0 outline-none appearance-none cursor-pointer placeholder:text-tmuted/40"
-                placeholder="From"
               />
             </div>
 
@@ -127,13 +117,15 @@ export default function Customers() {
               <ArrowRightIcon size={14} />
             </div>
 
-            {/* To Date */}
             <div className="relative flex-1 min-w-[140px] lg:w-40">
               <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
               <input 
                 type="date" 
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-9 pr-3 py-1.5 bg-transparent border-none text-xs font-bold text-tmain focus:ring-0 outline-none appearance-none cursor-pointer placeholder:text-tmuted/40"
               />
             </div>
@@ -144,59 +136,61 @@ export default function Customers() {
       <Table 
         columns={columns} 
         data={customers} 
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id || item.id}
         renderRow={renderRow} 
+        isLoading={loading}
       />
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        title="Add New Customer"
-      >
-        <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); setIsModalOpen(false); }}>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-black text-tmuted uppercase tracking-widest pl-1">Assign to Dealer</label>
-            <select className="w-full px-4 py-3 bg-surface border border-surfaceBorder rounded-xl text-sm font-medium focus:border-form-primary outline-none transition-all shadow-sm">
-              <option value="">-- Choose a Dealer --</option>
-              {dealers.map(dealer => (
-                <option key={dealer.id} value={dealer.id}>{dealer.name}</option>
-              ))}
-            </select>
-          </div>
+      {/* Pagination UI */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
+          <p className="text-xs font-bold text-tmuted uppercase tracking-widest">
+            Showing <span className="text-tmain">{(currentPage - 1) * limit + 1}</span> to <span className="text-tmain">{Math.min(currentPage * limit, totalRecords)}</span> of <span className="text-tmain">{totalRecords}</span> entries
+          </p>
+          <div className="flex items-center gap-1 bg-surface border border-surfaceBorder p-1 rounded-xl shadow-sm">
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg text-tmuted hover:bg-background hover:text-primary-500 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            
+            {[...Array(totalPages)].map((_, i) => {
+              const pageNum = i + 1;
+              if (totalPages > 7) {
+                if (pageNum !== 1 && pageNum !== totalPages && Math.abs(pageNum - currentPage) > 1) {
+                  if (pageNum === 2 || pageNum === totalPages - 1) return <span key={pageNum} className="px-2 text-tmuted">...</span>;
+                  return null;
+                }
+              }
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={cn(
+                    "min-w-[36px] h-9 rounded-lg text-xs font-bold transition-all",
+                    currentPage === pageNum 
+                      ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
+                      : "text-tmuted hover:bg-background hover:text-tmain"
+                  )}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormInput label="Customer Name" placeholder="e.g. Ramesh Singh" required />
-            <FormInput label="Mobile Number" placeholder="e.g. 9876543210" required />
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg text-tmuted hover:bg-background hover:text-primary-500 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
-          <FormInput label="Village / Address" placeholder="e.g. Palampur" required />
-          
-          <div className="p-5 bg-primary-500/10 border border-primary-500/20 rounded-xl relative mt-4">
-             <div className="absolute top-0 left-0 w-1.5 h-full bg-primary-500 rounded-l-xl"></div>
-             <h4 className="text-[11px] font-black text-primary-400 mb-4 tracking-widest uppercase">App Login Credentials</h4>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormInput type="email" label="Customer Email" placeholder="customer@agro.in" required />
-               <FormInput type="password" label="Customer Password" placeholder="••••••••" required />
-             </div>
-             <p className="text-[10px] text-tmuted mt-3 font-medium italic">These credentials will allow the customer to log directly into the external Agro mobile application.</p>
-          </div>
-          
-          <div className="pt-6 flex items-center justify-end gap-3 mt-8 border-t border-surfaceBorder/50">
-            <Button type="button" variant="ghost" className="rounded-md" onClick={() => setIsModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" className="rounded-md px-6">
-              Save Customer
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      <DeleteModal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
-        onConfirm={handleConfirmDelete}
-        itemName={customerToDelete?.name}
-      />
+        </div>
+      )}
 
       <Modal
         isOpen={isFeedbackModalOpen}
@@ -207,16 +201,15 @@ export default function Customers() {
         <div className="space-y-6">
           <div className="flex items-center gap-4 p-4 glass rounded-2xl border border-surfaceBorder">
             <div className="w-12 h-12 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-primary-500/20">
-              {selectedCustomer?.name.charAt(0)}
+              {selectedCustomer?.name?.charAt(0) || "C"}
             </div>
             <div>
               <h3 className="font-bold text-tmain text-lg leading-tight">{selectedCustomer?.name}</h3>
-              <p className="text-xs text-tmuted font-medium">{selectedCustomer?.mobile} • {selectedCustomer?.village}</p>
+              <p className="text-xs text-tmuted font-medium">{selectedCustomer?.mobile} • {selectedCustomer?.village || selectedCustomer?.address || "N/A"}</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            {/* Feedback Section */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-[11px] font-black text-tmuted uppercase tracking-widest pl-1">
                 <MessageSquare size={14} className="text-primary-500" />
@@ -230,7 +223,6 @@ export default function Customers() {
               />
             </div>
 
-            {/* Reply Section */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-[11px] font-black text-tmuted uppercase tracking-widest pl-1">
                 <CornerUpRight size={14} className="text-emerald-500" />
@@ -258,7 +250,7 @@ export default function Customers() {
                className="bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/20 px-8"
                onClick={() => {
                  console.log("Saving Feedback for:", selectedCustomer?.name, { feedback, reply });
-                 setIsFeedbackModalOpen(false);
+                 setIsFeedbackModalOpen(true);
                }}
               >
                Save

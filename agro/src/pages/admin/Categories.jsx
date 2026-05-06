@@ -6,57 +6,50 @@ import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
 import DeleteModal from "../../components/ui/DeleteModal";
-import { 
-  useGetCategoriesMutation, 
-  useCreateOrUpdateCategoryMutation, 
-  useDeleteCategoryMutation, 
-  useChangeCategoryStatusMutation 
-} from "../../redux/api/categoryApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchCategories, getCategory, createCategory, deleteCategory, changeCategoryStatus } from "../../redux/slices/categorySlice";
 
 export default function Categories() {
-  const [categories, setCategories] = useState([]);
+  const dispatch = useDispatch();
+  const { categories, loading: isFetching } = useSelector((state) => state.category);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     name: ""
   });
 
-  const [getCategories, { isLoading: isFetching }] = useGetCategoriesMutation();
-  const [createOrUpdateCategory, { isLoading: isSaving }] = useCreateOrUpdateCategoryMutation();
-  const [deleteCategory] = useDeleteCategoryMutation();
-  const [changeStatus] = useChangeCategoryStatusMutation();
-
-  const fetchCategories = async () => {
-    try {
-      const result = await getCategories({
-        page: 1,
-        limit: 100,
-        search: { name: searchQuery },
-        sortfield: "_id",
-        sortoption: 1
-      }).unwrap();
-      if (result.IsSuccess) {
-        setCategories(result.Data.docs || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch categories:", err);
-    }
+  const fetchCategoryData = async () => {
+    dispatch(fetchCategories({
+      page: 1,
+      limit: 100,
+      search: { name: searchQuery },
+      sortfield: "_id",
+      sortoption: 1
+    }));
   };
 
   useEffect(() => {
-    fetchCategories();
+    fetchCategoryData();
   }, [searchQuery]);
 
-  const handleOpenModal = (category = null) => {
+  const handleOpenModal = async (category = null) => {
     if (category) {
-      setEditingCategory(category);
-      setFormData({
-        name: category.name
-      });
+      try {
+        const result = await dispatch(getCategory(category._id)).unwrap();
+        const categoryData = result.Data;
+        setEditingCategory(categoryData);
+        setFormData({
+          name: categoryData.name
+        });
+      } catch (err) {
+        console.error("Failed to fetch category details:", err);
+      }
     } else {
       setEditingCategory(null);
       setFormData({
@@ -68,18 +61,21 @@ export default function Categories() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       const payload = {
         categoryid: editingCategory ? editingCategory._id : "",
         ...formData
       };
-      const result = await createOrUpdateCategory(payload).unwrap();
+      const result = await dispatch(createCategory(payload)).unwrap();
       if (result.IsSuccess) {
         setIsModalOpen(false);
-        fetchCategories();
+        fetchCategoryData();
       }
     } catch (err) {
       console.error("Failed to save category:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -90,9 +86,9 @@ export default function Categories() {
 
   const handleConfirmDelete = async () => {
     try {
-      await deleteCategory({ categoryid: categoryToDelete._id }).unwrap();
+      await dispatch(deleteCategory(categoryToDelete._id)).unwrap();
       setIsDeleteModalOpen(false);
-      fetchCategories();
+      fetchCategoryData();
     } catch (err) {
       console.error("Failed to delete category:", err);
     }
@@ -100,8 +96,8 @@ export default function Categories() {
 
   const handleToggleStatus = async (id) => {
     try {
-      await changeStatus({ categoryid: id }).unwrap();
-      fetchCategories();
+      await dispatch(changeCategoryStatus(id)).unwrap();
+      fetchCategoryData();
     } catch (err) {
       console.error("Failed to change status:", err);
     }

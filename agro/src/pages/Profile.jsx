@@ -3,20 +3,19 @@ import Button from "../components/ui/Button";
 import FormInput from "../components/ui/FormInput";
 import { useDispatch, useSelector } from "react-redux";
 import { useState, useEffect } from "react";
-import { useGetProfileQuery, useUpdateProfileMutation, useChangePasswordMutation } from "../redux/api/authApi";
-import { updateUser } from "../redux/slices/authSlice";
+import { getProfile, updateProfile, changePassword, updateUser } from "../redux/slices/authSlice";
 
 export default function Profile() {
-  const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
-  const { data: profileData, isLoading: isFetching } = useGetProfileQuery();
-  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
-  const [changePassword, { isLoading: isChanging }] = useChangePasswordMutation();
+  const { user, loading: isFetching } = useSelector((state) => state.auth);
+  
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isChanging, setIsChanging] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    // Add other fields as needed based on API response
+    mobile: "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -28,26 +27,33 @@ export default function Profile() {
   const [message, setMessage] = useState({ type: "", text: "" });
 
   useEffect(() => {
-    if (profileData?.Data?.userData) {
-      const userObj = profileData.Data.userData;
+    dispatch(getProfile());
+  }, []);
+
+  useEffect(() => {
+    if (user) {
       setFormData({
-        name: userObj.name || "",
-        email: userObj.email || "",
-        mobile: userObj.mobile || "",
-        role: userObj.rolename || "User",
+        name: user.name || "",
+        email: user.email || "",
+        mobile: user.mobile || "",
+        role: user.rolename || "User",
       });
     }
-  }, [profileData]);
+  }, [user]);
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: "", text: "" });
+    setIsUpdating(true);
     try {
-      const result = await updateProfile(formData).unwrap();
-      dispatch(updateUser(result));
-      setMessage({ type: "success", text: "Profile updated successfully!" });
+      const result = await dispatch(updateProfile(formData)).unwrap();
+      if (result.IsSuccess) {
+        setMessage({ type: "success", text: "Profile updated successfully!" });
+      }
     } catch (err) {
-      setMessage({ type: "error", text: err?.data?.message || "Failed to update profile." });
+      setMessage({ type: "error", text: err?.message || "Failed to update profile." });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -58,15 +64,20 @@ export default function Profile() {
       setMessage({ type: "error", text: "New passwords do not match." });
       return;
     }
+    setIsChanging(true);
     try {
-      await changePassword({
+      const result = await dispatch(changePassword({
         oldpassword: passwordData.oldpassword,
         password: passwordData.password
-      }).unwrap();
-      setMessage({ type: "success", text: "Password changed successfully!" });
-      setPasswordData({ oldpassword: "", password: "", confirmPassword: "" });
+      })).unwrap();
+      if (result.IsSuccess) {
+        setMessage({ type: "success", text: "Password changed successfully!" });
+        setPasswordData({ oldpassword: "", password: "", confirmPassword: "" });
+      }
     } catch (err) {
-      setMessage({ type: "error", text: err?.data?.message || "Failed to change password." });
+      setMessage({ type: "error", text: err?.message || "Failed to change password." });
+    } finally {
+      setIsChanging(false);
     }
   };
 

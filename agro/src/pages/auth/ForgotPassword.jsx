@@ -4,23 +4,28 @@ import Button from "../../components/ui/Button";
 import ThemeToggle from "../../components/ui/ThemeToggle";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useForgotPasswordMutation } from "../../redux/api/authApi";
+import { useDispatch } from "react-redux";
+import { forgotPassword } from "../../redux/slices/authSlice";
 
 export default function ForgotPassword() {
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
     setError("");
+    setIsLoading(true);
     try {
-      await forgotPassword({ email }).unwrap();
+      await dispatch(forgotPassword({ email })).unwrap();
       setMessage("Password reset instructions have been sent to your email.");
     } catch (err) {
-      setError(err?.data?.message || "Something went wrong. Please try again.");
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 

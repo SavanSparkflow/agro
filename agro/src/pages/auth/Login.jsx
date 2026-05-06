@@ -5,27 +5,30 @@ import ThemeToggle from "../../components/ui/ThemeToggle";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
-import { useLoginMutation } from "../../redux/api/authApi";
-import { setCredentials } from "../../redux/slices/authSlice";
+import { loginUser, setCredentials } from "../../redux/slices/authSlice";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [login, { isLoading }] = useLoginMutation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
     try {
-      const result = await login(formData).unwrap();
-      dispatch(setCredentials(result));
-      navigate("/");
+      const result = await dispatch(loginUser(formData)).unwrap();
+      if (result.IsSuccess) {
+        navigate("/");
+      }
     } catch (err) {
-      setError(err?.data?.Message || err?.data?.message || "Login failed. Please check your credentials.");
+      setError(err?.Message || err?.message || "Login failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
     }
   };
 

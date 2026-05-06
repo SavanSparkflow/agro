@@ -1,27 +1,28 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit2, Trash2, Mail, Shield, Loader2, Save, User as UserIcon, Phone, MapPin, Building2, Landmark, CreditCard, Lock } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Mail, Shield, Loader2, Save, User as UserIcon, Phone, MapPin, Building2, Landmark, CreditCard, Lock, Eye, EyeOff } from "lucide-react";
 import { cn } from "../../lib/utils";
 import Table from "../../components/ui/Table";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import FormInput from "../../components/ui/FormInput";
 import DeleteModal from "../../components/ui/DeleteModal";
-import { 
-  useGetUsersMutation, 
-  useCreateOrUpdateUserMutation, 
-  useDeleteUserMutation, 
-  useChangeUserStatusMutation 
-} from "../../redux/api/userApi";
-import { useSearchRolesQuery } from "../../redux/api/roleApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchUsers, getUser, createUser, deleteUser, changeUserStatus } from "../../redux/slices/userSlice";
+import { fetchRolesWOP } from "../../redux/slices/roleSlice";
 
 export default function Users() {
-  const [users, setUsers] = useState([]);
+  const dispatch = useDispatch();
+  const { users, loading: isFetching } = useSelector((state) => state.user);
+  const { rolesWOP: roles } = useSelector((state) => state.role);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [errors, setErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,54 +40,47 @@ export default function Users() {
     roleid: ""
   });
 
-  const [getUsers, { isLoading: isFetching }] = useGetUsersMutation();
-  const [createOrUpdateUser, { isLoading: isSaving }] = useCreateOrUpdateUserMutation();
-  const [deleteUser] = useDeleteUserMutation();
-  const [changeStatus] = useChangeUserStatusMutation();
-  const { data: rolesData } = useSearchRolesQuery("");
-  const roles = rolesData?.Data || [];
-
   const fetchData = async () => {
-    try {
-      const result = await getUsers({
-        page: 1,
-        limit: 50,
-        search: { name: searchTerm },
-        sortfield: "_id",
-        sortoption: -1,
-        roleid: "",
-        branchid: ""
-      }).unwrap();
-      if (result.IsSuccess) {
-        setUsers(result.Data.docs || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    }
+    dispatch(fetchUsers({
+      page: 1,
+      limit: 50,
+      search: { name: searchTerm },
+      sortfield: "_id",
+      sortoption: -1,
+      roleid: "",
+      branchid: ""
+    }));
   };
 
   useEffect(() => {
     fetchData();
+    dispatch(fetchRolesWOP(""));
   }, [searchTerm]);
 
-  const handleOpenModal = (user = null) => {
+  const handleOpenModal = async (user = null) => {
     if (user) {
-      setEditingUser(user);
-      setFormData({
-        name: user.name || "",
-        surname: user.surname || "",
-        fathername: user.fathername || "",
-        gstnumber: user.gstnumber || "",
-        address: user.address || "",
-        bankname: user.bankname || "",
-        bankaccountnumber: user.bankaccountnumber || "",
-        bankifsccode: user.bankifsccode || "",
-        email: user.email || "",
-        countrycode: user.countrycode || "+91",
-        mobile: user.mobile || "",
-        password: "", // Don't populate password
-        roleid: user.roleid?._id || user.roleid || ""
-      });
+      try {
+        const result = await dispatch(getUser(user._id)).unwrap();
+        const userData = result.Data;
+        setEditingUser(userData);
+        setFormData({
+          name: userData.name || "",
+          surname: userData.surname || "",
+          fathername: userData.fathername || "",
+          gstnumber: userData.gstnumber || "",
+          address: userData.address || "",
+          bankname: userData.bankname || "",
+          bankaccountnumber: userData.bankaccountnumber || "",
+          bankifsccode: userData.bankifsccode || "",
+          email: userData.email || "",
+          countrycode: userData.countrycode || "+91",
+          mobile: userData.mobile || "",
+          password: "", // Password usually not returned for security
+          roleid: userData.roleid?._id || userData.roleid || ""
+        });
+      } catch (err) {
+        console.error("Failed to fetch user details:", err);
+      }
     } else {
       setEditingUser(null);
       setFormData({
@@ -106,6 +100,7 @@ export default function Users() {
       });
     }
     setErrors({});
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -137,18 +132,21 @@ export default function Users() {
     e.preventDefault();
     if (!validateForm()) return;
     
+    setIsSaving(true);
     try {
       const payload = {
         userid: editingUser ? editingUser._id : "",
         ...formData
       };
-      const result = await createOrUpdateUser(payload).unwrap();
+      const result = await dispatch(createUser(payload)).unwrap();
       if (result.IsSuccess) {
         setIsModalOpen(false);
         fetchData();
       }
     } catch (err) {
       console.error("Failed to save user:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -159,7 +157,7 @@ export default function Users() {
 
   const handleConfirmDelete = async () => {
     try {
-      await deleteUser({ userid: userToDelete._id }).unwrap();
+      await dispatch(deleteUser(userToDelete._id)).unwrap();
       setIsDeleteModalOpen(false);
       fetchData();
     } catch (err) {
@@ -169,7 +167,7 @@ export default function Users() {
 
   const handleToggleStatus = async (id) => {
     try {
-      await changeStatus({ userid: id }).unwrap();
+      await dispatch(changeUserStatus(id)).unwrap();
       fetchData();
     } catch (err) {
       console.error("Failed to change status:", err);
@@ -186,7 +184,7 @@ export default function Users() {
             {item.name?.charAt(0) || "U"}
           </div>
           <div>
-            <span className="font-bold text-tmain block">{item.name} {item.surname}</span>
+            <span className="font-bold text-tmain block">{item.name} {item.surname || ""}</span>
             <span className="text-[10px] text-tmuted uppercase tracking-wider">{item.email}</span>
           </div>
         </div>
@@ -332,11 +330,27 @@ export default function Users() {
                 {errors.roleid && <span className="text-[11px] font-medium text-red-500 mt-1 block">{errors.roleid}</span>}
               </div>
             </div>
-            {!editingUser && (
-              <div className="max-w-md">
-                <FormInput label="Login Password" type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} error={errors.password} required={!editingUser} />
-              </div>
-            )}
+            <div className="max-w-md">
+              <FormInput 
+                label="Login Password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="••••••••" 
+                value={formData.password} 
+                onChange={(e) => setFormData({...formData, password: e.target.value})} 
+                error={errors.password} 
+                required={!editingUser} 
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-tmuted hover:text-form-primary transition-colors focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                }
+              />
+              {editingUser && <p className="text-[10px] text-tmuted mt-1 italic">Leave blank to keep existing password.</p>}
+            </div>
           </div>
 
           {/* Section: Banking Information */}
@@ -367,7 +381,7 @@ export default function Users() {
         isOpen={isDeleteModalOpen} 
         onClose={() => setIsDeleteModalOpen(false)} 
         onConfirm={handleConfirmDelete}
-        itemName={`${userToDelete?.name} ${userToDelete?.surname}`}
+        itemName={`${userToDelete?.name} ${userToDelete?.surname || ""}`}
       />
     </div>
   );
