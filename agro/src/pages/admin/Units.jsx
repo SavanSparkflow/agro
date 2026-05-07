@@ -5,21 +5,24 @@ import Card from "../../components/ui/Card";
 import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 import DeleteModal from "../../components/ui/DeleteModal";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUnits, getUnit, createUnit, deleteUnit, changeUnitStatus } from "../../redux/slices/unitSlice";
 
 export default function Units() {
   const dispatch = useDispatch();
-  const { units, loading: isFetching } = useSelector((state) => state.unit);
-  
+  const { units, totalRecords, loading: isFetching } = useSelector((state) => state.unit);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUnit, setEditingUnit] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [unitToDelete, setUnitToDelete] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: "",
     sequence: ""
@@ -27,9 +30,9 @@ export default function Units() {
 
   const fetchData = async () => {
     dispatch(fetchUnits({
-      page: 1,
-      limit: 100,
-      search: { name: searchQuery },
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery ? { name: searchQuery } : "",
       sortfield: "_id",
       sortoption: 1
     }));
@@ -37,6 +40,15 @@ export default function Units() {
 
   useEffect(() => {
     fetchData();
+  }, [searchQuery, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchQuery]);
 
   const handleOpenModal = async (unit = null) => {
@@ -122,21 +134,21 @@ export default function Units() {
       <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
         <div className="relative w-full sm:w-80 group">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search units..." 
+            placeholder="Search units..."
             className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
           />
         </div>
       </div>
 
-      <Table 
-        columns={["Sequence", "Unit Name", "Status", "Actions"]} 
-        data={units} 
+      <Table
+        columns={["Sequence", "Unit Name", "Status", "Actions"]}
+        data={units}
         keyExtractor={(item) => item._id}
-        renderRow={(unit,index) => (
+        renderRow={(unit, index) => (
           <>
             <td className="px-6 py-4">
               <span className="text-xs font-bold text-tmuted">{index + 1}</span>
@@ -150,26 +162,25 @@ export default function Units() {
               </div>
             </td>
             <td className="px-6 py-4">
-              <button 
+              <button
                 onClick={() => handleToggleStatus(unit._id)}
-                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${
-                  unit.status 
-                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
-                    : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                }`}
+                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${unit.status
+                  ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                  : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                  }`}
               >
                 {unit.status ? "Active" : "Inactive"}
               </button>
             </td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => handleOpenModal(unit)}
                   className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Edit2 size={14} />
                 </button>
-                <button 
+                <button
                   onClick={() => handleDeleteClick(unit)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
@@ -181,26 +192,33 @@ export default function Units() {
         )}
       />
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Pagination
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={editingUnit ? "Edit Unit" : "Add New Unit"}
         className="max-w-md"
       >
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <FormInput 
-            label="Unit Name" 
-            placeholder="e.g. KG, LTR, PKT" 
+          <FormInput
+            label="Unit Name"
+            placeholder="e.g. KG, LTR, PKT"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required 
+            required
           />
-          <FormInput 
-            label="Display Sequence" 
+          <FormInput
+            label="Display Sequence"
             type="number"
             value={formData.sequence}
             onChange={(e) => setFormData({ ...formData, sequence: e.target.value })}
-            required 
+            required
           />
 
           <div className="pt-6 flex items-center justify-end gap-3 mt-4 border-t border-surfaceBorder/50">
@@ -213,9 +231,9 @@ export default function Units() {
         </form>
       </Modal>
 
-      <DeleteModal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={unitToDelete?.name}
       />

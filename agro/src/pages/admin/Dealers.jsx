@@ -6,6 +6,7 @@ import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
 import FormInput from "../../components/ui/FormInput";
 import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 import { fetchUsers, getUser, createUser, deleteUser, changeUserStatus } from "../../redux/slices/userSlice";
 import { fetchRolesWOP } from "../../redux/slices/roleSlice";
 import { fetchCustomersWOP } from "../../redux/slices/customerSlice";
@@ -16,10 +17,12 @@ const mockCustomers = {};
 
 export default function Dealers() {
   const dispatch = useDispatch();
-  const { users: dealers, loading: isFetching } = useSelector((state) => state.user);
+  const { users: dealers, totalRecords, loading: isFetching } = useSelector((state) => state.user);
   const { rolesWOP: roles } = useSelector((state) => state.role);
   const { customersWOP } = useSelector((state) => state.customer);
-  
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingDealer, setEditingDealer] = useState(null);
@@ -32,10 +35,7 @@ export default function Dealers() {
 
   const columns = ["Dealer Name", "GST", "Phone", "Location", "Bank", "IFSC", "A/C Number", "Customers", "Actions"];
 
-  const filteredDealers = dealers.filter(dealer => 
-    (dealer.name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (dealer.mobile?.includes(searchTerm))
-  );
+  const filteredDealers = dealers; // Using server-side filtering
 
   const [formData, setFormData] = useState({
     name: "",
@@ -46,7 +46,7 @@ export default function Dealers() {
     email: "",
     countrycode: "+91",
     password: "",
-    address: "",
+    location: "",
     bankname: "",
     bankifsccode: "",
     bankaccountnumber: "",
@@ -58,15 +58,24 @@ export default function Dealers() {
 
   const fetchData = async () => {
     dispatch(fetchUsers({
-      page: 1,
-      limit: 50,
-      search: { name: searchTerm },
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchTerm ? { name: searchTerm } : "",
       sortfield: "_id",
       sortoption: -1,
       roleid: dealerRole,
       branchid: ""
     }));
   };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(fetchRolesWOP(""));
@@ -76,7 +85,7 @@ export default function Dealers() {
     if (dealerRole || !roles.length) {
       fetchData();
     }
-  }, [searchTerm, dealerRole]);
+  }, [searchTerm, dealerRole, currentPage]);
 
   useEffect(() => {
     if (isCustomerModalOpen) {
@@ -84,7 +93,7 @@ export default function Dealers() {
     }
   }, [isCustomerModalOpen]);
 
-  const dealerCustomers = (customersWOP?.docs || customersWOP || []).filter(cust => 
+  const dealerCustomers = (customersWOP?.docs || customersWOP || []).filter(cust =>
     cust.distributorid?._id === currentDealer?._id || cust.distributorid === currentDealer?._id
   );
 
@@ -108,7 +117,7 @@ export default function Dealers() {
           email: dealerData.email || "",
           countrycode: dealerData.countrycode || "+91",
           password: dealerData.password || "",
-          address: dealerData.address || "",
+          location: dealerData.location || "",
           bankname: dealerData.bankname || "",
           bankifsccode: dealerData.bankifsccode || "",
           bankaccountnumber: dealerData.bankaccountnumber || "",
@@ -128,7 +137,7 @@ export default function Dealers() {
         email: "",
         countrycode: "+91",
         password: "",
-        address: "",
+        location: "",
         bankname: "",
         bankifsccode: "",
         bankaccountnumber: "",
@@ -194,7 +203,7 @@ export default function Dealers() {
       </td>
       <td className="px-6 py-4">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface text-tmuted border border-surfaceBorder">
-           <MapPin size={12} className="text-tmuted/70" /> {item.address || item.location || "N/A"}
+          <MapPin size={12} className="text-tmuted/70" /> {item.address || item.location || "N/A"}
         </span>
       </td>
       <td className="px-6 py-4 text-sm font-bold text-tmain whitespace-nowrap">
@@ -211,21 +220,21 @@ export default function Dealers() {
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => handleOpenModal(item)}
             className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
             title="Edit"
           >
             <Pencil size={16} /> {/* Using Plus as Edit icon placeholder or just import Edit2 */}
           </button>
-          <button 
+          <button
             onClick={() => handleDeleteClick(item)}
             className="p-1.5 text-tmuted hover:text-red-500 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
             title="Delete"
           >
             <Trash2 size={16} />
           </button>
-          <button 
+          <button
             onClick={() => {
               setCurrentDealer(item);
               setIsCustomerModalOpen(true);
@@ -254,11 +263,11 @@ export default function Dealers() {
       </div>
 
       <div className="glass p-4 rounded-3xl flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20">
-         <div className="relative w-full sm:w-96 group">
+        <div className="relative w-full sm:w-96 group">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search Dealer network..." 
+          <input
+            type="text"
+            placeholder="Search Dealer network..."
             className="w-full pl-11 pr-4 py-3 bg-surface border border-surfaceBorder rounded-2xl text-sm focus:border-form-primary focus:ring-1 focus:ring-form-primary outline-none text-tmain placeholder:text-tmuted transition-all shadow-inner"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -268,11 +277,11 @@ export default function Dealers() {
 
       {/* Desktop Table View */}
       <div className="hidden lg:block">
-        <Table 
-          columns={columns} 
-          data={filteredDealers} 
+        <Table
+          columns={columns}
+          data={filteredDealers}
           keyExtractor={(item) => item._id}
-          renderRow={renderRow} 
+          renderRow={renderRow}
           isLoading={isFetching}
         />
       </div>
@@ -326,13 +335,13 @@ export default function Dealers() {
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-1">
-               <div className="flex items-center gap-2 text-[11px] font-bold text-tmuted/70 uppercase tracking-wider">
-                  <CreditCard size={12} /> {item.bankname || "N/A"}
-               </div>
-               <div className="text-[11px] text-tmuted/50 font-medium">A/C: {item.bankaccountnumber || "N/A"}</div>
+              <div className="flex items-center gap-2 text-[11px] font-bold text-tmuted/70 uppercase tracking-wider">
+                <CreditCard size={12} /> {item.bankname || "N/A"}
+              </div>
+              <div className="text-[11px] text-tmuted/50 font-medium">A/C: {item.bankaccountnumber || "N/A"}</div>
             </div>
 
-            <Button 
+            <Button
               onClick={() => {
                 setCurrentDealer(item);
                 setIsCustomerModalOpen(true);
@@ -354,85 +363,92 @@ export default function Dealers() {
         )}
       </div>
 
-       <Modal 
-        isOpen={isModalOpen} 
+      <Pagination
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
+
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Add New Dealer"
         className="max-w-2xl"
       >
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormInput 
-              label="First Name" 
-              placeholder="e.g. Ramesh" 
+            <FormInput
+              label="First Name"
+              placeholder="e.g. Ramesh"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              required 
+              required
             />
-            <FormInput 
-              label="Surname" 
-              placeholder="e.g. Singh" 
+            <FormInput
+              label="Surname"
+              placeholder="e.g. Singh"
               name="surname"
               value={formData.surname}
               onChange={handleInputChange}
-              required 
+              required
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormInput 
-              label="Father Name" 
-              placeholder="e.g. Baldev Singh" 
+            <FormInput
+              label="Father Name"
+              placeholder="e.g. Baldev Singh"
               name="fathername"
               value={formData.fathername}
               onChange={handleInputChange}
-              required 
+              required
             />
-            <FormInput 
-              label="GST Number" 
-              placeholder="e.g. 02AAAAA0000A1Z5" 
+            <FormInput
+              label="GST Number"
+              placeholder="e.g. 02AAAAA0000A1Z5"
               name="gstnumber"
               value={formData.gstnumber}
               onChange={handleInputChange}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormInput 
-              label="Mobile" 
-              placeholder="e.g. 9876543210" 
+            <FormInput
+              label="Mobile"
+              placeholder="e.g. 9876543210"
               name="mobile"
               value={formData.mobile}
               onChange={handleInputChange}
-              required 
+              required
             />
-             <FormInput 
-            label="Location" 
-            placeholder="e.g. Palampur" 
-            name="address"
-            value={formData.address}
-            onChange={handleInputChange}
-            required 
-          />
+            <FormInput
+              label="Location"
+              placeholder="e.g. Palampur"
+              name="location"
+              value={formData.location}
+              onChange={handleInputChange}
+              required
+            />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-surfaceBorder/50">
-            <FormInput 
-              type="email" 
-              label="Dealer Login Email" 
-              placeholder="dealer@agro.in" 
+            <FormInput
+              type="email"
+              label="Dealer Login Email"
+              placeholder="dealer@agro.in"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              required 
+              required
             />
-            <FormInput 
-              type="text" 
-              label="Dealer Assigned Password" 
-              placeholder="••••••••" 
+            <FormInput
+              type="text"
+              label="Dealer Assigned Password"
+              placeholder="••••••••"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              required 
+              required
             />
           </div>
 
@@ -440,30 +456,30 @@ export default function Dealers() {
           <div className="pt-4 border-t border-surfaceBorder/50 space-y-4">
             <h4 className="text-[10px] font-black text-tmuted uppercase tracking-[0.2em]">Bank Settlement Details</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <FormInput 
-                label="Bank Name" 
-                placeholder="e.g. HDFC Bank" 
+              <FormInput
+                label="Bank Name"
+                placeholder="e.g. HDFC Bank"
                 name="bankname"
                 value={formData.bankname}
                 onChange={handleInputChange}
               />
-              <FormInput 
-                label="IFSC Code" 
-                placeholder="e.g. HDFC0001234" 
+              <FormInput
+                label="IFSC Code"
+                placeholder="e.g. HDFC0001234"
                 name="bankifsccode"
                 value={formData.bankifsccode}
                 onChange={handleInputChange}
               />
             </div>
-            <FormInput 
-              label="Account Number" 
-              placeholder="e.g. 50100234567890" 
+            <FormInput
+              label="Account Number"
+              placeholder="e.g. 50100234567890"
               name="bankaccountnumber"
               value={formData.bankaccountnumber}
               onChange={handleInputChange}
             />
           </div>
-          
+
           <div className="pt-6 flex items-center justify-end gap-3 mt-8 border-t border-surfaceBorder/50">
             <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
               Cancel
@@ -475,8 +491,8 @@ export default function Dealers() {
         </form>
       </Modal>
 
-       <Modal 
-        isOpen={isCustomerModalOpen} 
+      <Modal
+        isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         title={currentDealer ? `${currentDealer.name} - Network Customers` : "Customer List"}
         className="max-w-3xl"
@@ -508,7 +524,7 @@ export default function Dealers() {
             ) : (
               <div className="p-12 text-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-tmuted/10 flex items-center justify-center mx-auto text-tmuted/50">
-                   <Users size={32} />
+                  <Users size={32} />
                 </div>
                 <div>
                   <h4 className="text-lg font-bold text-tmain">No Active Customers</h4>
@@ -526,9 +542,9 @@ export default function Dealers() {
         </div>
       </Modal>
 
-      <DeleteModal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={dealerToDelete ? `${dealerToDelete.name} ${dealerToDelete.surname || ""}` : ""}
       />

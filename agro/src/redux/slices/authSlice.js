@@ -68,6 +68,17 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
+export const updateProfilePic = createAsyncThunk(
+  'auth/updateProfilePic',
+  async (formData, { rejectWithValue }) => {
+    try {
+      return await authService.updateProfilePic(formData);
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const initialState = {
   user: JSON.parse(localStorage.getItem('user')) || null,
   token: localStorage.getItem('token') || null,

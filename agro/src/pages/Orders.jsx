@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, Filter, Box, ChevronDown, Loader2, Calendar, IndianRupee, Hash, User, Trash2 } from "lucide-react";
 import Table from "../components/ui/Table";
+import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOrders, changeOrderStatus, deleteOrder } from "../redux/slices/orderSlice";
@@ -8,16 +9,18 @@ import { format } from "date-fns";
 
 export default function Orders() {
   const dispatch = useDispatch();
-  const { orders, loading: isFetching } = useSelector((state) => state.order);
+  const { orders, totalRecords, loading: isFetching } = useSelector((state) => state.order);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   const fetchData = async () => {
     dispatch(fetchOrders({
-      page: 1,
-      limit: 50,
-      search: searchTerm ? { orderno: searchTerm } : {},
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchTerm ? { orderno: searchTerm } : "",
       distributorid: [],
       customerid: [],
       orderno: [],
@@ -29,6 +32,15 @@ export default function Orders() {
 
   useEffect(() => {
     fetchData();
+  }, [searchTerm, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchTerm]);
 
   const handleStatusChange = async (orderid, newStatus) => {
@@ -185,6 +197,13 @@ export default function Orders() {
           renderRow={renderRow} 
         />
       </div>
+
+      <Pagination 
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

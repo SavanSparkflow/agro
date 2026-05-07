@@ -29,6 +29,14 @@ export const authService = {
     const response = await apiInstance.get('/api/auth/profilepic');
     return response.data;
   },
+  updateProfilePic: async (formData) => {
+    const response = await apiInstance.post('/api/auth/profilepic', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
   logout: async () => {
     const response = await apiInstance.post('/api/auth/logout');
     return response.data;

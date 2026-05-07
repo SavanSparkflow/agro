@@ -5,18 +5,21 @@ import Card from "../../components/ui/Card";
 import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 import DeleteModal from "../../components/ui/DeleteModal";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts, getProduct, createProduct, deleteProduct, changeProductStatus, uploadProductImage } from "../../redux/slices/productSlice";
+import { fetchProducts, getProduct, createProduct, deleteProduct, uploadProductImage } from "../../redux/slices/productSlice";
 import { fetchCategoriesWOP } from "../../redux/slices/categorySlice";
 import { fetchUnitsWOP } from "../../redux/slices/unitSlice";
 
 export default function Products() {
   const dispatch = useDispatch();
-  const { products, loading: isFetching } = useSelector((state) => state.product);
+  const { products, totalRecords, loading: isFetching } = useSelector((state) => state.product);
   const { categoriesWOP: categories } = useSelector((state) => state.category);
   const { unitsWOP: units } = useSelector((state) => state.unit);
-  
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
@@ -24,9 +27,8 @@ export default function Products() {
   const [productToDelete, setProductToDelete] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [changingStatusId, setChangingStatusId] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
     categoryid: "",
     name: "",
@@ -38,10 +40,12 @@ export default function Products() {
 
   const fetchData = async () => {
     dispatch(fetchProducts({
-      page: 1,
-      limit: 50,
-      search: { name: searchQuery },
-      sortoption: -1
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery ? { name: searchQuery } : "",
+      sortfield: "_id",
+      sortoption: -1,
+      categoryid: ""
     }));
     dispatch(fetchCategoriesWOP(""));
     dispatch(fetchUnitsWOP(""));
@@ -49,6 +53,15 @@ export default function Products() {
 
   useEffect(() => {
     fetchData();
+  }, [searchQuery, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchQuery]);
 
   const handleOpenModal = async (product = null) => {
@@ -137,19 +150,19 @@ export default function Products() {
     }
   };
 
-  const handleToggleStatus = async (id) => {
-    setChangingStatusId(id);
-    try {
-      const result = await dispatch(changeProductStatus(id)).unwrap();
-      if (result.IsSuccess) {
-        fetchData();
-      }
-    } catch (err) {
-      console.error("Failed to change status:", err);
-    } finally {
-      setChangingStatusId(null);
-    }
-  };
+  // const handleToggleStatus = async (id) => {
+  //   setChangingStatusId(id);
+  //   try {
+  //     const result = await dispatch(changeProductStatus(id)).unwrap();
+  //     if (result.IsSuccess) {
+  //       fetchData();
+  //     }
+  //   } catch (err) {
+  //     console.error("Failed to change status:", err);
+  //   } finally {
+  //     setChangingStatusId(null);
+  //   }
+  // };
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -167,25 +180,25 @@ export default function Products() {
       <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
         <div className="relative w-full sm:w-80 group">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search products..." 
+          <input
+            type="text"
+            placeholder="Search products..."
             className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="ghost" size="sm" className="text-xs h-9">
-              <Filter size={14} />
-              <span>Filters</span>
-           </Button>
+          <Button variant="ghost" size="sm" className="text-xs h-9">
+            <Filter size={14} />
+            <span>Filters</span>
+          </Button>
         </div>
       </div>
 
-      <Table 
-        columns={["Product", "Category", "Unit", "Price", "Status", "Actions"]} 
-        data={products} 
+      <Table
+        columns={["Product", "Category", "Unit", "Price", "Actions"]}
+        data={products}
         keyExtractor={(item) => item._id}
         renderRow={(product) => (
           <>
@@ -215,7 +228,7 @@ export default function Products() {
             <td className="px-6 py-4">
               <span className="text-sm font-bold text-form-primary">₹{product.price}</span>
             </td>
-            <td className="px-6 py-4">
+            {/* <td className="px-6 py-4">
               <button 
                 onClick={() => handleToggleStatus(product._id)}
                 disabled={changingStatusId === product._id}
@@ -232,16 +245,16 @@ export default function Products() {
                 )}
                 {product.status ? "Active" : "Inactive"}
               </button>
-            </td>
+            </td> */}
             <td className="px-6 py-4">
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => handleOpenModal(product)}
                   className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Edit2 size={14} />
                 </button>
-                <button 
+                <button
                   onClick={() => handleDeleteClick(product)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
@@ -253,30 +266,37 @@ export default function Products() {
         )}
       />
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Pagination
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={editingProduct ? "Edit Product" : "Add New Product"}
         className="max-w-3xl"
       >
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <FormInput 
-                label="Product Name" 
-                placeholder="e.g. Urea 50KG" 
+              <FormInput
+                label="Product Name"
+                placeholder="e.g. Urea 50KG"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required 
+                required
               />
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">Category</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain"
                     value={formData.categoryid}
                     onChange={(e) => setFormData({ ...formData, categoryid: e.target.value })}
-                    // required
+                  // required
                   >
                     <option value="">Select Category</option>
                     {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -284,30 +304,30 @@ export default function Products() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">Unit</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-2.5 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    // required
+                  // required
                   >
                     <option value="">Select Unit</option>
                     {units.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
                   </select>
                 </div>
               </div>
-              <FormInput 
-                label="Price (₹)" 
+              <FormInput
+                label="Price (₹)"
                 type="number"
-                placeholder="0.00" 
+                placeholder="0.00"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                required 
+                required
               />
             </div>
 
             <div className="space-y-4">
               <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">Product Image</label>
-              <div 
+              <div
                 onClick={() => fileInputRef.current.click()}
                 className="aspect-square w-full rounded-2xl border-2 border-dashed border-surfaceBorder bg-background flex flex-col items-center justify-center cursor-pointer hover:border-form-primary transition-all group overflow-hidden relative shadow-inner"
               >
@@ -321,7 +341,7 @@ export default function Products() {
                   <>
                     <img src={formData.image} alt="Product" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <Upload className="text-white w-8 h-8" />
+                      <Upload className="text-white w-8 h-8" />
                     </div>
                   </>
                 ) : (
@@ -341,7 +361,7 @@ export default function Products() {
 
           <div className="space-y-1.5">
             <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">Description</label>
-            <textarea 
+            <textarea
               placeholder="Enter product description and specifications..."
               className="w-full px-4 py-3 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain min-h-[100px] resize-none"
               value={formData.description}
@@ -359,9 +379,9 @@ export default function Products() {
         </form>
       </Modal>
 
-      <DeleteModal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={productToDelete?.name}
       />

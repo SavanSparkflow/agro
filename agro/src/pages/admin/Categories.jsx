@@ -5,30 +5,34 @@ import Card from "../../components/ui/Card";
 import FormInput from "../../components/ui/FormInput";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 import DeleteModal from "../../components/ui/DeleteModal";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCategories, getCategory, createCategory, deleteCategory, changeCategoryStatus } from "../../redux/slices/categorySlice";
 
 export default function Categories() {
   const dispatch = useDispatch();
-  const { categories, loading: isFetching } = useSelector((state) => state.category);
-  
+  const { categories, totalRecords, loading: isFetching } = useSelector((state) => state.category);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: ""
   });
 
   const fetchCategoryData = async () => {
     dispatch(fetchCategories({
-      page: 1,
-      limit: 100,
-      search: { name: searchQuery },
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery ? { name: searchQuery } : "",
       sortfield: "_id",
       sortoption: 1
     }));
@@ -36,6 +40,15 @@ export default function Categories() {
 
   useEffect(() => {
     fetchCategoryData();
+  }, [searchQuery, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchQuery]);
 
   const handleOpenModal = async (category = null) => {
@@ -119,19 +132,19 @@ export default function Categories() {
       <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
         <div className="relative w-full sm:w-80 group">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search categories..." 
+            placeholder="Search categories..."
             className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
           />
         </div>
       </div>
 
-      <Table 
-        columns={["Category Name", "Status", "Actions"]} 
-        data={categories} 
+      <Table
+        columns={["Category Name", "Status", "Actions"]}
+        data={categories}
         keyExtractor={(item) => item._id}
         renderRow={(category) => (
           <>
@@ -144,26 +157,25 @@ export default function Categories() {
               </div>
             </td>
             <td className="px-6 py-4">
-              <button 
+              <button
                 onClick={() => handleToggleStatus(category._id)}
-                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${
-                  category.status 
-                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
+                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${category.status
+                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
                     : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                }`}
+                  }`}
               >
                 {category.status ? "Active" : "Inactive"}
               </button>
             </td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => handleOpenModal(category)}
                   className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Edit2 size={14} />
                 </button>
-                <button 
+                <button
                   onClick={() => handleDeleteClick(category)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
@@ -175,19 +187,26 @@ export default function Categories() {
         )}
       />
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Pagination
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={editingCategory ? "Edit Category" : "Add New Category"}
         className="max-w-md"
       >
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <FormInput 
-            label="Category Name" 
-            placeholder="e.g. Pesticides" 
+          <FormInput
+            label="Category Name"
+            placeholder="e.g. Pesticides"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required 
+            required
           />
 
           <div className="pt-6 flex items-center justify-end gap-3 mt-4 border-t border-surfaceBorder/50">
@@ -200,9 +219,9 @@ export default function Categories() {
         </form>
       </Modal>
 
-      <DeleteModal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={categoryToDelete?.name}
       />

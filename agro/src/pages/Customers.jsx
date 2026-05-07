@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, MessageSquare, Send, CornerUpRight, Calendar, ArrowRight as ArrowRightIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Table from "../components/ui/Table";
+import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,7 +11,7 @@ import { cn } from "../lib/utils";
 export default function Customers() {
   const dispatch = useDispatch();
   const { customers, totalRecords, loading } = useSelector((state) => state.customer);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,7 +30,7 @@ export default function Customers() {
     const payload = {
       page: currentPage,
       limit: limit,
-      search: searchTerm ? { name: searchTerm } : {},
+      search: searchTerm ? { name: searchTerm } : "",
       distributorid: [],
       name: [],
       email: [],
@@ -48,14 +49,14 @@ export default function Customers() {
 
   const handleSaveFeedback = async () => {
     if (!feedback.trim()) return;
-    
+
     setIsSavingFeedback(true);
     try {
       const result = await dispatch(submitCustomerFeedback({
         customerid: selectedCustomer._id,
         feedback: feedback
       })).unwrap();
-      
+
       if (result.IsSuccess) {
         setIsFeedbackModalOpen(false);
         setFeedback("");
@@ -79,7 +80,7 @@ export default function Customers() {
             {item.name?.charAt(0) || "C"}
           </div>
           <div className="flex flex-col">
-            <button 
+            <button
               onClick={() => {
                 setSelectedCustomer(item);
                 setFeedback(item.feedback || "");
@@ -135,9 +136,9 @@ export default function Customers() {
       <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col lg:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
         <div className="relative w-full lg:w-80 group">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search customers..." 
+          <input
+            type="text"
+            placeholder="Search customers..."
             className="w-full pl-11 pr-4 py-2.5 bg-background border border-surfaceBorder rounded-xl text-sm focus:border-form-primary focus:ring-1 focus:ring-form-primary outline-none text-tmain placeholder:text-tmuted transition-all shadow-inner"
             value={searchTerm}
             onChange={(e) => {
@@ -151,8 +152,8 @@ export default function Customers() {
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-background border border-surfaceBorder p-1.5 rounded-xl shadow-inner w-full lg:w-auto">
             <div className="relative flex-1 min-w-[140px] lg:w-40">
               <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={fromDate}
                 onChange={(e) => {
                   setFromDate(e.target.value);
@@ -168,8 +169,8 @@ export default function Customers() {
 
             <div className="relative flex-1 min-w-[140px] lg:w-40">
               <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-tmuted pointer-events-none" />
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={toDate}
                 onChange={(e) => {
                   setToDate(e.target.value);
@@ -182,64 +183,20 @@ export default function Customers() {
         </div>
       </div>
 
-      <Table 
-        columns={columns} 
-        data={customers} 
+      <Table
+        columns={columns}
+        data={customers}
         keyExtractor={(item) => item._id || item.id}
-        renderRow={renderRow} 
+        renderRow={renderRow}
         isLoading={loading}
       />
 
-      {/* Pagination UI */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
-          <p className="text-xs font-bold text-tmuted uppercase tracking-widest">
-            Showing <span className="text-tmain">{(currentPage - 1) * limit + 1}</span> to <span className="text-tmain">{Math.min(currentPage * limit, totalRecords)}</span> of <span className="text-tmain">{totalRecords}</span> entries
-          </p>
-          <div className="flex items-center gap-1 bg-surface border border-surfaceBorder p-1 rounded-xl shadow-sm">
-            <button 
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg text-tmuted hover:bg-background hover:text-primary-500 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            
-            {[...Array(totalPages)].map((_, i) => {
-              const pageNum = i + 1;
-              if (totalPages > 7) {
-                if (pageNum !== 1 && pageNum !== totalPages && Math.abs(pageNum - currentPage) > 1) {
-                  if (pageNum === 2 || pageNum === totalPages - 1) return <span key={pageNum} className="px-2 text-tmuted">...</span>;
-                  return null;
-                }
-              }
-              
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={cn(
-                    "min-w-[36px] h-9 rounded-lg text-xs font-bold transition-all",
-                    currentPage === pageNum 
-                      ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
-                      : "text-tmuted hover:bg-background hover:text-tmain"
-                  )}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
-
-            <button 
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg text-tmuted hover:bg-background hover:text-primary-500 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={limit}
+        onPageChange={(page) => setCurrentPage(page)}
+      />
 
       <Modal
         isOpen={isFeedbackModalOpen}
@@ -264,7 +221,7 @@ export default function Customers() {
                 <MessageSquare size={14} className="text-primary-500" />
                 Customer Feedback
               </label>
-              <textarea 
+              <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="What did the customer say about our services?"
@@ -278,7 +235,7 @@ export default function Customers() {
                 Your Reply
               </label>
               <div className="relative group">
-                <textarea 
+                <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                   placeholder="Type your official response here..."
@@ -292,17 +249,17 @@ export default function Customers() {
           </div>
 
           <div className="pt-6 border-t border-surfaceBorder/50 flex justify-end gap-3">
-             <Button variant="ghost" onClick={() => setIsFeedbackModalOpen(false)}>
-               Cancel
-             </Button>
-             <Button 
-               className="bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/20 px-8"
-               onClick={handleSaveFeedback}
-               disabled={isSavingFeedback || !feedback.trim()}
-              >
-               {isSavingFeedback ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-               Save Feedback
-             </Button>
+            <Button variant="ghost" onClick={() => setIsFeedbackModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/20 px-8"
+              onClick={handleSaveFeedback}
+              disabled={isSavingFeedback || !feedback.trim()}
+            >
+              {isSavingFeedback ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Feedback
+            </Button>
           </div>
         </div>
       </Modal>

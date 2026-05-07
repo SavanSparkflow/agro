@@ -4,19 +4,22 @@ import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { ExternalLink, Search } from "lucide-react";
 import Table from "../components/ui/Table";
+import Pagination from "../components/ui/Pagination";
 
 export default function SalesHistory() {
   const dispatch = useDispatch();
-  const { orders, loading } = useSelector((state) => state.order);
+  const { orders, totalRecords, loading } = useSelector((state) => state.order);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
   const fetchData = async () => {
     dispatch(fetchOrders({
-      page: 1,
-      limit: 100,
-      search: searchTerm ? { orderno: searchTerm } : {},
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchTerm ? { orderno: searchTerm } : "",
       distributorid: [],
       customerid: [],
       orderno: [],
@@ -28,6 +31,15 @@ export default function SalesHistory() {
 
   useEffect(() => {
     fetchData();
+  }, [searchTerm, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchTerm]);
 
   const columns = ["Invoice ID", "Customer Details", "Products Sold", "Date & Time", "Total Amount", "Actions"];
@@ -100,6 +112,13 @@ export default function SalesHistory() {
         keyExtractor={(item) => item._id}
         renderRow={renderRow} 
         isLoading={loading}
+      />
+
+      <Pagination 
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
       />
     </div>
   );

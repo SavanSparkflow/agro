@@ -1,32 +1,51 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, AlertCircle } from "lucide-react";
 import Table from "../components/ui/Table";
+import Pagination from "../components/ui/Pagination";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
 import FormInput from "../components/ui/FormInput";
 import FormSelect from "../components/ui/FormSelect";
 
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProductsWOP } from "../redux/slices/productSlice";
+import { fetchProducts } from "../redux/slices/productSlice";
 
 export default function Stock() {
   const dispatch = useDispatch();
-  const { productsWOP: products, loading } = useSelector((state) => state.product);
+  const { products, totalRecords, loading } = useSelector((state) => state.product);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    dispatch(fetchProductsWOP(""));
-  }, []);
+  const fetchData = async () => {
+    dispatch(fetchProducts({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchTerm ? { name: searchTerm } : "",
+      sortoption: -1
+    }));
+  };
 
-  const stockData = products.filter(p => 
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  ).map(p => ({
+  useEffect(() => {
+    fetchData();
+  }, [searchTerm, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const stockData = products.map(p => ({
     id: p._id,
     name: p.name,
     stock: p.stock || 0,
-    unit: p.unitid?.name || "N/A",
+    unit: p.unit?.name || p.unitid?.name || "N/A",
     status: (p.stock || 0) === 0 ? "Out of Stock" : (p.stock || 0) < 20 ? "Low Stock" : "In Stock"
   }));
 
@@ -95,6 +114,13 @@ export default function Stock() {
         keyExtractor={(item) => item.id} 
         renderRow={renderRow} 
         isLoading={loading}
+      />
+
+      <Pagination 
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
       />
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Update Stock">

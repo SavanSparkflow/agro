@@ -23,16 +23,11 @@ export default function Topbar({ setMobileOpen }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const mockResults = [
-    { type: 'Customers', items: ['Suresh Patel', 'Mahesh Shah', 'Ramesh Kumar'] },
-    { type: 'Transactions', items: ['INV-2024-001 - ₹15,000', 'INV-2024-002 - ₹8,500'] }
-  ];
-
   return (
     <header className="h-20 lg:h-24 sticky top-0 z-50 flex items-center justify-between px-4 sm:px-6 lg:px-8 transition-all bg-background/60 backdrop-blur-xl border-b border-surfaceBorder shadow-sm">
-      
+
       <div className="flex items-center gap-4">
-        <button 
+        <button
           onClick={() => setMobileOpen(true)}
           className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-surfaceBorder text-tmuted hover:text-tmain hover:bg-surface/80 transition-colors shadow-lg"
         >
@@ -40,8 +35,8 @@ export default function Topbar({ setMobileOpen }) {
         </button>
 
         {/* Search Bar Container */}
-        <div className="hidden sm:block relative">
-          <div className={`flex items-center gap-3 px-4 py-2.5 glass-card !rounded-2xl border-surfaceBorder transition-all w-64 md:w-96 group shadow-sm ${isFocused ? 'ring-4 ring-primary-500/10 border-primary-500/50' : ''}`}>
+        {/* <div className="hidden sm:block relative"> */}
+        {/* <div className={`flex items-center gap-3 px-4 py-2.5 glass-card !rounded-2xl border-surfaceBorder transition-all w-64 md:w-96 group shadow-sm ${isFocused ? 'ring-4 ring-primary-500/10 border-primary-500/50' : ''}`}>
             <Search size={18} className={`transition-colors ${isFocused ? 'text-form-primary' : 'text-tmuted'}`} />
             <input 
               ref={searchInputRef}
@@ -57,10 +52,10 @@ export default function Topbar({ setMobileOpen }) {
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface/80 text-tmuted border border-surfaceBorder shadow-sm border-b-2">{isMac ? '⌘' : 'Ctrl'}</span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface/80 text-tmuted border border-surfaceBorder shadow-sm border-b-2">K</span>
             </div>
-          </div>
+          </div> */}
 
-          {/* Search Results Dropdown */}
-          {(isFocused && searchQuery.length > 0) && (
+        {/* Search Results Dropdown */}
+        {/* {(isFocused && searchQuery.length > 0) && (
             <div className="absolute top-full left-0 right-0 mt-3 glass-card !rounded-2xl border-surfaceBorder shadow-2xl overflow-hidden animate-fade-in z-50 max-h-[400px] overflow-y-auto">
               <div className="p-2 space-y-4">
                 {mockResults.map((category) => (
@@ -84,21 +79,21 @@ export default function Topbar({ setMobileOpen }) {
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          )} */}
+        {/* </div> */}
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
         <ThemeToggle />
-        
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-400 text-xs font-bold mr-2 cursor-pointer hover:bg-primary-500/20 transition-colors">
+
+        {/* <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-400 text-xs font-bold mr-2 cursor-pointer hover:bg-primary-500/20 transition-colors">
           <Sparkles size={14} />
           <span>Pro Setup</span>
-        </div>
-        
+        </div> */}
+
         {/* Notifications Dropdown */}
         <div className="relative">
-          <button 
+          <button
             onClick={() => setShowNotifications(!showNotifications)}
             className={`relative w-10 h-10 flex items-center justify-center glass !rounded-xl transition-all shadow-lg group border-surfaceBorder ${showNotifications ? 'bg-surface ring-4 ring-primary-500/10' : 'text-tmuted hover:text-tmain'}`}
           >

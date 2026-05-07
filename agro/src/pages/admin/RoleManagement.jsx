@@ -3,6 +3,7 @@ import { Shield, Plus, Edit2, Trash2, Search, Loader2, Save } from "lucide-react
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import Table from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 import FormInput from "../../components/ui/FormInput";
 import DeleteModal from "../../components/ui/DeleteModal";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,24 +11,26 @@ import { fetchRoles, getRole, createRole, deleteRole, changeRoleStatus } from ".
 
 export default function RoleManagement() {
   const dispatch = useDispatch();
-  const { roles, loading: isFetching } = useSelector((state) => state.role);
-  
+  const { roles, totalRecords, loading: isFetching } = useSelector((state) => state.role);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingRole, setEditingRole] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     rolename: ""
   });
 
   const fetchData = async () => {
     dispatch(fetchRoles({
-      page: 1,
-      limit: 50,
-      search: { rolename: searchQuery },
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery ? { rolename: searchQuery } : "",
       sortfield: "_id",
       sortoption: 1
     }));
@@ -35,6 +38,15 @@ export default function RoleManagement() {
 
   useEffect(() => {
     fetchData();
+  }, [searchQuery, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to first page on search
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchQuery]);
 
   const handleOpenModal = async (role = null) => {
@@ -118,19 +130,19 @@ export default function RoleManagement() {
       <div className="bg-surface p-4 border border-surfaceBorder rounded-lg flex flex-col sm:flex-row gap-4 justify-between items-center relative z-20 shadow-sm">
         <div className="relative w-full sm:w-80 group">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tmuted group-focus-within:text-form-primary transition-colors" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search roles..." 
+            placeholder="Search roles..."
             className="w-full pl-10 pr-4 py-2 bg-surface border border-surfaceBorder rounded-[4px] text-sm focus:border-form-primary focus:ring-4 focus:ring-form-primary/10 outline-none text-tmain placeholder:text-tmuted transition-all shadow-sm"
           />
         </div>
       </div>
 
-      <Table 
-        columns={["Role Name", "Status", "Actions"]} 
-        data={roles} 
+      <Table
+        columns={["Role Name", "Status", "Actions"]}
+        data={roles}
         keyExtractor={(item) => item._id}
         renderRow={(role) => (
           <>
@@ -143,26 +155,25 @@ export default function RoleManagement() {
               </div>
             </td>
             <td className="px-6 py-4">
-              <button 
+              <button
                 onClick={() => handleToggleStatus(role._id)}
-                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${
-                  role.status 
-                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
+                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase transition-all ${role.status
+                    ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
                     : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                }`}
+                  }`}
               >
                 {role.status ? "Active" : "Inactive"}
               </button>
             </td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => handleOpenModal(role)}
                   className="p-1.5 text-tmuted hover:text-form-primary bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
                   <Edit2 size={14} />
                 </button>
-                <button 
+                <button
                   onClick={() => handleDeleteClick(role)}
                   className="p-1.5 text-tmuted hover:text-red-400 bg-surface/50 hover:bg-surface rounded border border-transparent hover:border-surfaceBorder shadow-sm transition-all"
                 >
@@ -174,18 +185,25 @@ export default function RoleManagement() {
         )}
       />
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Pagination
+        currentPage={currentPage}
+        totalRecords={totalRecords}
+        limit={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={editingRole ? "Edit Role" : "Create New Role"}
       >
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <FormInput 
-            label="Role Name" 
-            placeholder="e.g. Sales Manager" 
+          <FormInput
+            label="Role Name"
+            placeholder="e.g. Sales Manager"
             value={formData.rolename}
             onChange={(e) => setFormData({ ...formData, rolename: e.target.value })}
-            required 
+            required
           />
 
           <div className="pt-6 flex items-center justify-end gap-3 mt-8 border-t border-surfaceBorder/50">
@@ -198,9 +216,9 @@ export default function RoleManagement() {
         </form>
       </Modal>
 
-      <DeleteModal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={roleToDelete?.rolename}
       />

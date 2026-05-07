@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, UserCircle, Box, Tags, Archive,
-  ReceiptIndianRupee, ChevronLeft, ChevronRight, MessageSquare, Shield, Clock, ShoppingCart, LogOut, Key, Layers, ShoppingBag, Scale
+  ReceiptIndianRupee, ChevronLeft, ChevronRight, MessageSquare, Shield, Clock, ShoppingCart, LogOut, Key, Layers, ShoppingBag, Scale,
+  Handshake,
+  ShelvingUnit
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,14 +21,14 @@ import { logout, getProfile, updateUser } from "../../redux/slices/authSlice";
 // ];
 
 const ADMIN_LINKS = [
-  { name: "Dealers List", href: "/admin/dealers", icon: Shield },
+  { name: "Dealers List", href: "/admin/dealers", icon: Handshake },
   { name: "User List", href: "/admin/users", icon: Users },
   { name: "Customers", href: "/admin/customers", icon: UserCircle },
-  { name: "Role Management", href: "/admin/roles", icon: Shield },
+  // { name: "Role Management", href: "/admin/roles", icon: Shield },
   { name: "Products", href: "/admin/products", icon: ShoppingBag },
   { name: "Categories", href: "/admin/categories", icon: Tags },
   { name: "Units", href: "/admin/units", icon: Scale },
-  { name: "Stock", href: "/admin/stock", icon: Archive },
+  { name: "Stock", href: "/admin/stock", icon: ShelvingUnit },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   // { name: "Billing", href: "/admin/billing", icon: ReceiptIndianRupee },
   { name: "Sales History", href: "/admin/history", icon: Clock },
@@ -60,7 +62,7 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
 
       {/* Sidebar container */}
       <aside className={cn(
-        "fixed z-50 transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] bg-surface/90 backdrop-blur-md border-r border-surfaceBorder",
+        "fixed z-[9999] transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] bg-surface/90 backdrop-blur-md border-r border-surfaceBorder",
         isOpen ? "w-72" : "w-20",
         "top-0 left-0 h-screen",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -195,10 +197,10 @@ export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOp
                 </div>
               </div>
             </Link>
-            
+
             {isOpen && (
               <div className="px-6 pb-4">
-                <button 
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all text-xs font-bold"
                 >
