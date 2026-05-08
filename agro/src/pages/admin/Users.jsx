@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit2, Trash2, Mail, Shield, Loader2, Save, User as UserIcon, Phone, MapPin, Building2, Landmark, CreditCard, Lock, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Mail, Shield, Loader2, Save, User as UserIcon, Phone, MapPin, Lock, Eye, EyeOff } from "lucide-react";
 import { cn } from "../../lib/utils";
 import Table from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
@@ -31,11 +31,7 @@ export default function Users() {
     name: "",
     surname: "",
     fathername: "",
-    gstnumber: "",
     address: "",
-    bankname: "",
-    bankaccountnumber: "",
-    bankifsccode: "",
     email: "",
     countrycode: "+91",
     mobile: "",
@@ -77,13 +73,7 @@ export default function Users() {
         setEditingUser(userData);
         setFormData({
           name: userData.name || "",
-          surname: userData.surname || "",
-          fathername: userData.fathername || "",
-          gstnumber: userData.gstnumber || "",
           address: userData.address || "",
-          bankname: userData.bankname || "",
-          bankaccountnumber: userData.bankaccountnumber || "",
-          bankifsccode: userData.bankifsccode || "",
           email: userData.email || "",
           countrycode: userData.countrycode || "+91",
           mobile: userData.mobile || "",
@@ -97,13 +87,7 @@ export default function Users() {
       setEditingUser(null);
       setFormData({
         name: "",
-        surname: "",
-        fathername: "",
-        gstnumber: "",
         address: "",
-        bankname: "",
-        bankaccountnumber: "",
-        bankifsccode: "",
         email: "",
         countrycode: "+91",
         mobile: "",
@@ -119,8 +103,6 @@ export default function Users() {
   const validateForm = () => {
     let newErrors = {};
     if (!formData.name.trim()) newErrors.name = "First name is required";
-    if (!formData.surname.trim()) newErrors.surname = "Surname is required";
-    if (!formData.fathername.trim()) newErrors.fathername = "Father's name is required";
     if (!formData.address.trim()) newErrors.address = "Location/Address is required";
     if (!formData.email.trim()) newErrors.email = "Email address is required";
     else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Invalid email format";
@@ -248,7 +230,7 @@ export default function Users() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-tmain tracking-tight font-sans">User Management</h1>
-          <p className="text-sm text-tmuted mt-1">Manage system users, contact details, and banking information.</p>
+          <p className="text-sm text-tmuted mt-1">Manage system users, contact details, and roles.</p>
         </div>
         <Button onClick={() => handleOpenModal()} className="rounded-md px-6 py-2">
           <Plus size={18} />
@@ -297,53 +279,9 @@ export default function Users() {
               <UserIcon size={14} /> Personal Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <FormInput label="First Name" placeholder="e.g. Ramesh" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} error={errors.name} required />
-              <FormInput label="Surname" placeholder="e.g. Singh" value={formData.surname} onChange={(e) => setFormData({ ...formData, surname: e.target.value })} error={errors.surname} required />
-              <FormInput label="Father's Name" placeholder="e.g. Baldev Singh" value={formData.fathername} onChange={(e) => setFormData({ ...formData, fathername: e.target.value })} error={errors.fathername} required />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <FormInput label="GST Number" placeholder="22AAAAA0000A1Z5" value={formData.gstnumber} onChange={(e) => setFormData({ ...formData, gstnumber: e.target.value })} />
-              <div className="md:col-span-2">
-                <FormInput label="Location / Address" placeholder="City, State, Country" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} error={errors.address} required />
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Contact & Auth */}
-          <div className="space-y-4 pt-4 border-t border-surfaceBorder/50">
-            <h3 className="text-[10px] font-black text-form-primary uppercase tracking-[0.2em] flex items-center gap-2">
-              <Lock size={14} /> Contact & Authentication
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <FormInput label="Name" placeholder="e.g. Ramesh" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} error={errors.name} required />
+              <FormInput label="Location / Address" placeholder="City, State, Country" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} error={errors.address} required />
               <FormInput label="Email Address" type="email" placeholder="ramesh@agro.in" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} error={errors.email} required />
-              <div className="flex gap-2">
-                <div className="w-24">
-                  <FormInput label="Code" value={formData.countrycode} onChange={(e) => setFormData({ ...formData, countrycode: e.target.value })} required />
-                </div>
-                <div className="flex-1">
-                  <FormInput label="Mobile Number" placeholder="9876543210" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} error={errors.mobile} required />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">System Role</label>
-                <select
-                  className={cn(
-                    "w-full px-4 py-2.5 bg-background border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain",
-                    errors.roleid && "!border-red-500 !focus:border-red-500"
-                  )}
-                  value={formData.roleid}
-                  onChange={(e) => setFormData({ ...formData, roleid: e.target.value })}
-                  required
-                >
-                  <option value="">Select Role</option>
-                  {roles.map(r => (
-                    <option key={r._id} value={r._id}>{r.rolename}</option>
-                  ))}
-                </select>
-                {errors.roleid && <span className="text-[11px] font-medium text-red-500 mt-1 block">{errors.roleid}</span>}
-              </div>
-            </div>
-            <div className="max-w-md">
               <FormInput
                 label="Login Password"
                 type={showPassword ? "text" : "password"}
@@ -363,18 +301,25 @@ export default function Users() {
                 }
               />
               {editingUser && <p className="text-[10px] text-tmuted mt-1 italic">Leave blank to keep existing password.</p>}
-            </div>
-          </div>
-
-          {/* Section: Banking Information */}
-          <div className="space-y-4 pt-4 border-t border-surfaceBorder/50">
-            <h3 className="text-[10px] font-black text-form-primary uppercase tracking-[0.2em] flex items-center gap-2">
-              <Landmark size={14} /> Banking Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <FormInput label="Bank Name" placeholder="e.g. State Bank of India" value={formData.bankname} onChange={(e) => setFormData({ ...formData, bankname: e.target.value })} />
-              <FormInput label="Account Number" placeholder="00000000000" value={formData.bankaccountnumber} onChange={(e) => setFormData({ ...formData, bankaccountnumber: e.target.value })} />
-              <FormInput label="IFSC Code" placeholder="SBIN0000001" value={formData.bankifsccode} onChange={(e) => setFormData({ ...formData, bankifsccode: e.target.value })} />
+              <FormInput label="Mobile Number" placeholder="9876543210" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} error={errors.mobile} required />
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black text-tmuted uppercase tracking-widest ml-1">System Role</label>
+                <select
+                  className={cn(
+                    "w-full px-4 py-3 bg-[#27282b] border border-surfaceBorder rounded-md text-sm outline-none focus:border-form-primary transition-all text-tmain",
+                    errors.roleid && "!border-red-500 !focus:border-red-500"
+                  )}
+                  value={formData.roleid}
+                  onChange={(e) => setFormData({ ...formData, roleid: e.target.value })}
+                  required
+                >
+                  <option value="">Select Role</option>
+                  {roles.map(r => (
+                    <option key={r._id} value={r._id}>{r.rolename}</option>
+                  ))}
+                </select>
+                {errors.roleid && <span className="text-[11px] font-medium text-red-500 mt-1 block">{errors.roleid}</span>}
+              </div>
             </div>
           </div>
 

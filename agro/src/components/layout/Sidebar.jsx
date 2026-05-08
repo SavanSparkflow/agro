@@ -31,7 +31,7 @@ const ADMIN_LINKS = [
   { name: "Stock", href: "/admin/stock", icon: ShelvingUnit },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   // { name: "Billing", href: "/admin/billing", icon: ReceiptIndianRupee },
-  { name: "Sales History", href: "/admin/history", icon: Clock },
+  // { name: "Sales History", href: "/admin/history", icon: Clock },
 ];
 
 export default function Sidebar({ isOpen, toggleSidebar, mobileOpen, setMobileOpen }) {
